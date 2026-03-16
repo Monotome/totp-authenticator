@@ -148,7 +148,6 @@ class TOTPApp:
             widget.destroy()
 
         self._build_lock_screen()
-        self._update_loop()
 
     # ── Build ──────────────────────────────────────────────────────────────────
 
