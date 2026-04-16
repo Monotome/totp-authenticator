@@ -45,7 +45,7 @@ jobs:
           Compress-Archive -Path dist/main.dist/* -DestinationPath dist/TOTP-Authenticator-${{ github.ref_name }}-windows.zip
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: apps/ui/dist/TOTP-Authenticator-${{ github.ref_name }}-windows.zip
           generate_release_notes: true
