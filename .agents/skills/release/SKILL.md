@@ -102,28 +102,37 @@ Example entry:
 
 ## 5. 🛠️ Execution Playbook: Cutting a Release
 
-### Step 1: Ensure `main` is clean and up to date
+### Step 1: Ensure `main` is clean, then checkout a release branch
 ```powershell
 git checkout main
 git pull origin main
-git status
+git checkout -b chore/prepare-release-vX.Y.Z
 ```
 
 ### Step 2: Update Version Strings & CHANGELOG.md
-Update the files listed in Section 3 and Section 4.
+Update the files listed in Section 3 and Section 4, then verify with quality gates (`flutter test`, `pytest`, `ruff check`).
 
 ### Step 3: Commit the Release Preparation
 ```powershell
-git add CHANGELOG.md apps/ui/pyproject.toml apps/ui/src/totp_authenticator/__init__.py apps/mobile/pubspec.yaml
+git add CHANGELOG.md apps/ui/pyproject.toml apps/ui/src/totp_authenticator/__init__.py apps/api/pyproject.toml apps/mobile/pubspec.yaml
 git commit -m "chore(release): prepare release vX.Y.Z"
 ```
 
-### Step 4: Push `main` to Remote
+### Step 4: Push Branch, Create PR, and Auto-Merge on GitHub
 ```powershell
-git push origin main
+git push -u origin chore/prepare-release-vX.Y.Z
+gh pr create --title "chore(release): prepare release vX.Y.Z" --body "<Release highlights>"
+gh pr merge chore/prepare-release-vX.Y.Z --merge --delete-branch
 ```
 
-### Step 5: Create and Push Annotated Git Tag
+### Step 5: Switch Back to `main` and Pull Latest Code
+```powershell
+git checkout main
+git pull origin main
+git branch -d chore/prepare-release-vX.Y.Z
+```
+
+### Step 6: Create and Push Annotated Git Tag
 ```powershell
 # Create annotated tag with summary
 git tag -a vX.Y.Z -m "Release vX.Y.Z: <Short Highlights>"
@@ -132,11 +141,11 @@ git tag -a vX.Y.Z -m "Release vX.Y.Z: <Short Highlights>"
 git push origin vX.Y.Z
 ```
 
-### Step 6: Monitor GitHub Actions Build
-1. Open GitHub Actions: `https://github.com/SilvaHerald/totp-authenticator/actions`.
+### Step 7: Monitor GitHub Actions Build
+1. Open GitHub Actions: `https://github.com/Monotome/totp-authenticator/actions`.
 2. Inspect the **Release** workflow run.
 3. Once completed (~5-8 minutes), verify that the release package appears under:
-   `https://github.com/SilvaHerald/totp-authenticator/releases/tag/vX.Y.Z`
+   `https://github.com/Monotome/totp-authenticator/releases/tag/vX.Y.Z`
 4. Verify asset downloads:
    - `TOTP-Authenticator-vX.Y.Z-windows.zip` (Desktop standalone executable)
    - `TOTP-Authenticator-vX.Y.Z-android.apk` (Android mobile APK)
