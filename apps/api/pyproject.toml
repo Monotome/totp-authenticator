@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "totp-authenticator-api"
-version = "0.7.1"
+version = "0.8.0"
 description = "Cloud Sync E2EE Server for TOTP Authenticator"
 requires-python = ">=3.10"
 dependencies = [
