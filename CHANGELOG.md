@@ -6,7 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- **Desktop UI Geometry & Visual Alignment Testing (`apps/ui`)**: Added automated geometry assertions in `test_ui_modern.py` verifying that toolbar buttons share identical vertical coordinates (`winfo_rooty()`), exact 28x28px dimensions, strictly ordered horizontal positions, vector icon caching, and inner wrapper padding isolating focus border colors.
+- **Mobile Flutter Golden Visual Testing (`apps/mobile`)**: Established pixel-by-pixel visual snapshot testing pipeline using `matchesGoldenFile` for Mobile UI (`LockScreen` in Dark & Light themes), rendering baseline PNGs at 1080x1920 viewport to automatically catch visual layout regressions in CI/test runs.
+
 ### Fixed
+- **Mobile LockScreen Text Overflow (`apps/mobile`)**: Fixed a 59px `RenderFlex` horizontal overflow in the LockScreen security reassurance footer on compact viewports by wrapping description text in `Flexible` with `TextOverflow.ellipsis`.
 - **Desktop UI Polish & Border Artifacts (`apps/ui`)**:
   - **Input Focus Border Clean-up**: Fixed double vertical edge highlight artifacts in dialog input fields by wrapping entries in matching background inner frames, ensuring a sharp 1px border and smooth internal padding.
   - **Sidebar Action Buttons Dark Mode Colors**: Fixed `Rename` and `Delete` buttons turning stark white in Dark Mode after toggling themes by ensuring button hover bindings and palette updaters dynamically refresh to active theme colors (`surface`).
