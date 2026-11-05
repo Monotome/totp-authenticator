@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- **Desktop UI Polish & Border Artifacts (`apps/ui`)**:
+  - **Input Focus Border Clean-up**: Fixed double vertical edge highlight artifacts in dialog input fields by wrapping entries in matching background inner frames, ensuring a sharp 1px border and smooth internal padding.
+  - **Sidebar Action Buttons Dark Mode Colors**: Fixed `Rename` and `Delete` buttons turning stark white in Dark Mode after toggling themes by ensuring button hover bindings and palette updaters dynamically refresh to active theme colors (`surface`).
+  - **Header Action Toolbar Alignment & Vector Icons**: Replaced misaligned text emoji buttons with a unified, pixel-aligned 28x28 toolbar featuring smooth anti-aliased vector icons (Cloud Sync, Settings, Theme Toggle) rendered with supersampled PIL graphics and interactive hover tooltips.
+
 
 ## [v0.8.1] - 2026-11-05
 ### Fixed

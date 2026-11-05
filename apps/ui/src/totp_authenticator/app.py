@@ -1,10 +1,12 @@
 """TOTP Authenticator UI — modern Windows 11 Fluent Tkinter desktop interface."""
 
+import math
 import time
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog
 
 import pyperclip
+from PIL import Image, ImageDraw, ImageTk
 
 from totp_authenticator.api import ConflictError
 from totp_authenticator.core import get_code, get_remaining_seconds, validate_secret
@@ -27,6 +29,64 @@ from totp_authenticator.storage import (
     verify_password,
 )
 from totp_authenticator.sync_manager import SyncManager
+
+
+class ToolTip:
+    """Lightweight modern hover tooltip for Tkinter widgets."""
+
+    def __init__(self, widget: tk.Widget, text: str) -> None:
+        self.widget = widget
+        self.text = text
+        self.tip_window: tk.Toplevel | None = None
+        self._after_id: str | None = None
+        self.widget.bind("<Enter>", self._on_enter, add="+")
+        self.widget.bind("<Leave>", self._on_leave, add="+")
+        self.widget.bind("<ButtonPress>", self._on_leave, add="+")
+
+    def _on_enter(self, _event: tk.Event = None) -> None:  # type: ignore[assignment]
+        self._cancel()
+        self._after_id = self.widget.after(350, self._show)
+
+    def _on_leave(self, _event: tk.Event = None) -> None:  # type: ignore[assignment]
+        self._cancel()
+        if self.tip_window:
+            self.tip_window.destroy()
+            self.tip_window = None
+
+    def _cancel(self) -> None:
+        if self._after_id:
+            self.widget.after_cancel(self._after_id)
+            self._after_id = None
+
+    def _show(self) -> None:
+        if self.tip_window or not self.text:
+            return
+        try:
+            x = self.widget.winfo_rootx() + (self.widget.winfo_width() // 2) - 40
+            y = self.widget.winfo_rooty() + self.widget.winfo_height() + 6
+            self.tip_window = tw = tk.Toplevel(self.widget)
+            tw.wm_overrideredirect(True)
+            tw.wm_geometry(f"+{x}+{y}")
+            tw.attributes("-topmost", True)
+            label = tk.Label(
+                tw,
+                text=self.text,
+                justify="center",
+                bg="#0b0f19",
+                fg="#f8fafc",
+                relief="flat",
+                padx=8,
+                pady=4,
+                font=("Segoe UI", 8),
+                highlightthickness=1,
+                highlightbackground="#334155",
+            )
+            label.pack()
+        except Exception:
+            pass
+
+    def update_text(self, text: str) -> None:
+        self.text = text
 
 # ── Colour palettes (Windows 11 Fluent & Modern Slate) ─────────────────────
 THEMES = {
@@ -127,6 +187,7 @@ class TOTPApp:
         self._last_activity = time.time()
         self._update_job: str | None = None
         self._card_widgets: dict[str, list[tk.Widget]] = {}
+        self._icon_cache: dict[tuple[str, str, int], ImageTk.PhotoImage] = {}
 
         # Track window moves to save config
         self.root.bind("<Configure>", self._on_window_configure)
@@ -199,6 +260,142 @@ class TOTPApp:
 
     # ── UI Builder Helpers ─────────────────────────────────────────────────────
 
+    def _get_action_icon(
+        self, name: str, color: str, size: int = 15
+    ) -> ImageTk.PhotoImage:
+        """Render a crisp, anti-aliased vector icon using PIL and return PhotoImage."""
+        key = (name, color, size)
+        if key in self._icon_cache:
+            return self._icon_cache[key]
+
+        scale = 4
+        canvas_size = size * scale
+        img = Image.new("RGBA", (canvas_size, canvas_size), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+
+        c = color.lstrip("#")
+        rgb = (
+            tuple(int(c[i : i + 2], 16) for i in (0, 2, 4))
+            if len(c) == 6
+            else (255, 255, 255)
+        )
+        fill_rgba = (*rgb, 255)
+
+        if name == "cloud":
+            d.rounded_rectangle(
+                [
+                    canvas_size * 0.15,
+                    canvas_size * 0.48,
+                    canvas_size * 0.85,
+                    canvas_size * 0.82,
+                ],
+                radius=canvas_size * 0.16,
+                fill=fill_rgba,
+            )
+            d.ellipse(
+                [
+                    canvas_size * 0.15,
+                    canvas_size * 0.38,
+                    canvas_size * 0.55,
+                    canvas_size * 0.80,
+                ],
+                fill=fill_rgba,
+            )
+            d.ellipse(
+                [
+                    canvas_size * 0.34,
+                    canvas_size * 0.20,
+                    canvas_size * 0.74,
+                    canvas_size * 0.65,
+                ],
+                fill=fill_rgba,
+            )
+            d.ellipse(
+                [
+                    canvas_size * 0.54,
+                    canvas_size * 0.40,
+                    canvas_size * 0.85,
+                    canvas_size * 0.80,
+                ],
+                fill=fill_rgba,
+            )
+
+        elif name == "gear":
+            cx, cy = canvas_size / 2, canvas_size / 2
+            r_outer = canvas_size * 0.42
+            r_inner = canvas_size * 0.30
+            r_hole = canvas_size * 0.16
+            bar_w = canvas_size * 0.14
+
+            d.ellipse(
+                [cx - r_inner, cy - r_inner, cx + r_inner, cy + r_inner],
+                fill=fill_rgba,
+            )
+            d.rectangle(
+                [cx - bar_w / 2, cy - r_outer, cx + bar_w / 2, cy + r_outer],
+                fill=fill_rgba,
+            )
+            d.rectangle(
+                [cx - r_outer, cy - bar_w / 2, cx + r_outer, cy + bar_w / 2],
+                fill=fill_rgba,
+            )
+            for angle in (45, 135):
+                rad = math.radians(angle)
+                cos_a, sin_a = math.cos(rad), math.sin(rad)
+                dx = r_outer * cos_a
+                dy = r_outer * sin_a
+                px = bar_w / 2 * (-sin_a)
+                py = bar_w / 2 * cos_a
+                poly = [
+                    (cx - dx - px, cy - dy - py),
+                    (cx - dx + px, cy - dy + py),
+                    (cx + dx + px, cy + dy + py),
+                    (cx + dx - px, cy + dy - py),
+                ]
+                d.polygon(poly, fill=fill_rgba)
+            d.ellipse(
+                [cx - r_inner, cy - r_inner, cx + r_inner, cy + r_inner],
+                fill=fill_rgba,
+            )
+            d.ellipse(
+                [cx - r_hole, cy - r_hole, cx + r_hole, cy + r_hole],
+                fill=(0, 0, 0, 0),
+            )
+
+        elif name == "sun":
+            cx, cy = canvas_size / 2, canvas_size / 2
+            r_core = canvas_size * 0.22
+            d.ellipse(
+                [cx - r_core, cy - r_core, cx + r_core, cy + r_core],
+                fill=fill_rgba,
+            )
+            ray_len = canvas_size * 0.12
+            ray_w = canvas_size * 0.08
+            for i in range(8):
+                ang = math.radians(i * 45)
+                r_start = canvas_size * 0.30
+                r_end = r_start + ray_len
+                x1 = cx + r_start * math.cos(ang)
+                y1 = cy + r_start * math.sin(ang)
+                x2 = cx + r_end * math.cos(ang)
+                y2 = cy + r_end * math.sin(ang)
+                d.line([(x1, y1), (x2, y2)], fill=fill_rgba, width=int(ray_w))
+
+        elif name == "moon":
+            cx, cy = canvas_size / 2, canvas_size / 2
+            r = canvas_size * 0.38
+            d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=fill_rgba)
+            cut_cx = cx + canvas_size * 0.16
+            cut_cy = cy - canvas_size * 0.12
+            cut_r = canvas_size * 0.34
+            cut_bbox = [cut_cx - cut_r, cut_cy - cut_r, cut_cx + cut_r, cut_cy + cut_r]
+            d.ellipse(cut_bbox, fill=(0, 0, 0, 0))
+
+        resized = img.resize((size, size), Image.Resampling.LANCZOS)
+        photo = ImageTk.PhotoImage(resized, master=self.root)
+        self._icon_cache[key] = photo
+        return photo
+
     def _create_modern_entry(
         self,
         parent: tk.Widget,
@@ -208,18 +405,23 @@ class TOTPApp:
     ) -> tuple[tk.Frame, tk.Entry]:
         """Create a modern styled text entry with a 1px border and focus ring."""
         container = tk.Frame(parent, bg=self.c["border"], padx=1, pady=1)
+        inner = tk.Frame(container, bg=self.c["bg_entry"])
+        inner.pack(fill="both", expand=True)
+
         entry = tk.Entry(
-            container,
+            inner,
             font=("Segoe UI", 10),
             bg=self.c["bg_entry"],
             fg=self.c["fg"],
             relief="flat",
+            bd=0,
+            highlightthickness=0,
             insertbackground=self.c["fg"],
             width=width,
             show=show,
             justify=justify,
         )
-        entry.pack(fill="both", expand=True, ipady=5, padx=6)
+        entry.pack(fill="both", expand=True, padx=8, ipady=5)
 
         def _on_focus_in(_event: tk.Event = None) -> None:  # type: ignore[assignment]
             container.configure(bg=self.c["border_focus"])
@@ -244,28 +446,11 @@ class TOTPApp:
         padx: int = 14,
         pady: int = 5,
     ) -> tk.Button:
-        """Create a modern button with flat relief and hover highlight."""
-        if is_danger:
-            bg = self.c["red"]
-            fg = "#ffffff"
-            hover_bg = "#b91c1c"
-        elif is_primary:
-            bg = self.c["blue"]
-            fg = "#ffffff"
-            hover_bg = self.c["blue_hover"]
-        else:
-            bg = self.c["surface"]
-            fg = self.c["fg"]
-            hover_bg = self.c["surface_hover"]
-
+        """Create a modern button with flat relief and dynamic theme-aware hover highlight."""
         btn = tk.Button(
             parent,
             text=text,
             font=font,
-            bg=bg,
-            fg=fg,
-            activebackground=hover_bg,
-            activeforeground=fg,
             relief="flat",
             borderwidth=0,
             padx=padx,
@@ -273,15 +458,105 @@ class TOTPApp:
             cursor="hand2",
             command=command,
         )
+        btn._btn_type = "primary" if is_primary else ("danger" if is_danger else "secondary")
+
+        def _update_colors() -> None:
+            if btn._btn_type == "primary":
+                b_bg = self.c["blue"]
+                b_fg = "#ffffff"
+                b_hbg = self.c["blue_hover"]
+            elif btn._btn_type == "danger":
+                b_bg = self.c["red"]
+                b_fg = "#ffffff"
+                b_hbg = "#b91c1c"
+            else:
+                b_bg = self.c["surface"]
+                b_fg = self.c["fg"]
+                b_hbg = self.c["surface_hover"]
+
+            btn.configure(
+                bg=b_bg,
+                fg=b_fg,
+                activebackground=b_hbg,
+                activeforeground=b_fg,
+            )
+            btn._current_normal_bg = b_bg
+            btn._current_hover_bg = b_hbg
+
+        _update_colors()
+        btn.update_colors = _update_colors  # type: ignore[attr-defined]
 
         def _on_enter(_e: tk.Event) -> None:
-            btn.configure(bg=hover_bg)
+            btn.configure(bg=btn._current_hover_bg)
 
         def _on_leave(_e: tk.Event) -> None:
-            btn.configure(bg=bg)
+            btn.configure(bg=btn._current_normal_bg)
 
         btn.bind("<Enter>", _on_enter)
         btn.bind("<Leave>", _on_leave)
+        return btn
+
+    def _create_icon_button(
+        self,
+        parent: tk.Widget,
+        icon_name: str,
+        command: object,
+        tooltip_text: str,
+        size: int = 15,
+    ) -> tk.Button:
+        """Create a modern square 28x28 icon button with hover state and tooltip."""
+        btn = tk.Button(
+            parent,
+            command=command,
+            relief="flat",
+            borderwidth=0,
+            cursor="hand2",
+            width=28,
+            height=28,
+        )
+        btn._icon_name = icon_name
+        btn._tooltip_text = tooltip_text
+        btn._tooltip = ToolTip(btn, tooltip_text)
+
+        def _update_colors() -> None:
+            btn.configure(
+                bg=self.c["bg_sidebar"],
+                activebackground=self.c["surface_hover"],
+            )
+            if btn._icon_name == "cloud" and getattr(self._settings, "sync_token", None):
+                icon_col = self.c["green"]
+            else:
+                icon_col = self.c["fg_dim"]
+
+            icon = self._get_action_icon(btn._icon_name, icon_col, size=size)
+            btn.configure(image=icon)
+            btn._icon_photo = icon  # Prevent garbage collection
+
+        _update_colors()
+        btn.update_colors = _update_colors  # type: ignore[attr-defined]
+
+        def _on_enter(_e: tk.Event) -> None:
+            btn.configure(bg=self.c["surface"])
+            is_connected = (
+                btn._icon_name == "cloud" and getattr(self._settings, "sync_token", None)
+            )
+            h_col = self.c["green"] if is_connected else self.c["fg"]
+            h_icon = self._get_action_icon(btn._icon_name, h_col, size=size)
+            btn.configure(image=h_icon)
+            btn._icon_photo = h_icon
+
+        def _on_leave(_e: tk.Event) -> None:
+            btn.configure(bg=self.c["bg_sidebar"])
+            is_connected = (
+                btn._icon_name == "cloud" and getattr(self._settings, "sync_token", None)
+            )
+            n_col = self.c["green"] if is_connected else self.c["fg_dim"]
+            n_icon = self._get_action_icon(btn._icon_name, n_col, size=size)
+            btn.configure(image=n_icon)
+            btn._icon_photo = n_icon
+
+        btn.bind("<Enter>", _on_enter, add="+")
+        btn.bind("<Leave>", _on_leave, add="+")
         return btn
 
     # ── Main UI Tree ───────────────────────────────────────────────────────────
@@ -293,9 +568,9 @@ class TOTPApp:
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.pack_propagate(False)
 
-        # Header contains "Accounts" label and action buttons
+        # Header contains "Accounts" label and unified toolbar
         self.header_frame = tk.Frame(self.sidebar, bg=self.c["bg_sidebar"])
-        self.header_frame.pack(fill="x", pady=(16, 10), padx=12)
+        self.header_frame.pack(fill="x", pady=(14, 10), padx=10)
 
         self.lbl_accounts = tk.Label(
             self.header_frame,
@@ -304,47 +579,35 @@ class TOTPApp:
             bg=self.c["bg_sidebar"],
             fg=self.c["fg"],
         )
-        self.lbl_accounts.pack(side="left")
+        self.lbl_accounts.pack(side="left", anchor="center")
 
-        # Header Action Buttons
-        self.btn_theme_toggle = tk.Button(
-            self.header_frame,
-            text="☀️" if self._settings.theme == "dark" else "🌙",
-            font=("Segoe UI", 10),
-            bg=self.c["bg_sidebar"],
-            fg=self.c["fg_dim"],
-            relief="flat",
-            borderwidth=0,
-            cursor="hand2",
-            command=self._toggle_theme,
-        )
-        self.btn_theme_toggle.pack(side="right", padx=(2, 0))
+        # Unified Header Action Toolbar
+        self.toolbar_frame = tk.Frame(self.header_frame, bg=self.c["bg_sidebar"])
+        self.toolbar_frame.pack(side="right", anchor="center")
 
-        self.btn_sync = tk.Button(
-            self.header_frame,
-            text="☁️",
-            font=("Segoe UI", 10),
-            bg=self.c["bg_sidebar"],
-            fg=self.c["fg_dim"],
-            relief="flat",
-            borderwidth=0,
-            cursor="hand2",
-            command=self._open_sync_dialog,
+        sync_tip = "Cloud Sync (Connected)" if self._settings.sync_token else "Cloud Sync (E2EE)"
+        self.btn_sync = self._create_icon_button(
+            self.toolbar_frame, "cloud", self._open_sync_dialog, sync_tip
         )
-        self.btn_sync.pack(side="right", padx=2)
+        self.btn_sync.pack(side="left", padx=2)
 
-        self.btn_security = tk.Button(
-            self.header_frame,
-            text="⚙️",
-            font=("Segoe UI", 10),
-            bg=self.c["bg_sidebar"],
-            fg=self.c["fg_dim"],
-            relief="flat",
-            borderwidth=0,
-            cursor="hand2",
-            command=self._open_security_dialog,
+        self.btn_security = self._create_icon_button(
+            self.toolbar_frame, "gear", self._open_security_dialog, "Security & Settings"
         )
-        self.btn_security.pack(side="right", padx=2)
+        self.btn_security.pack(side="left", padx=2)
+
+        theme_tip = (
+            "Switch to Light Mode"
+            if self._settings.theme == "dark"
+            else "Switch to Dark Mode"
+        )
+        self.btn_theme_toggle = self._create_icon_button(
+            self.toolbar_frame,
+            "sun" if self._settings.theme == "dark" else "moon",
+            self._toggle_theme,
+            theme_tip,
+        )
+        self.btn_theme_toggle.pack(side="left", padx=2)
 
         # Card-based scrollable container
         self.list_frame = tk.Frame(self.sidebar, bg=self.c["bg_sidebar"])
@@ -550,23 +813,33 @@ class TOTPApp:
         self.sidebar.configure(bg=self.c["bg_sidebar"])
         self.header_frame.configure(bg=self.c["bg_sidebar"])
         self.lbl_accounts.configure(bg=self.c["bg_sidebar"], fg=self.c["fg"])
-        self.btn_security.configure(bg=self.c["bg_sidebar"], fg=self.c["fg_dim"])
-        self.btn_sync.configure(bg=self.c["bg_sidebar"], fg=self.c["fg_dim"])
-        self.btn_theme_toggle.configure(
-            bg=self.c["bg_sidebar"],
-            fg=self.c["fg_dim"],
-            text="☀️" if self._settings.theme == "dark" else "🌙",
+        self.toolbar_frame.configure(bg=self.c["bg_sidebar"])
+
+        # Update action icon buttons
+        sync_tip = (
+            "Cloud Sync (Connected)" if self._settings.sync_token else "Cloud Sync (E2EE)"
         )
+        self.btn_sync._tooltip.update_text(sync_tip)
+        self.btn_sync.update_colors()
+
+        self.btn_security.update_colors()
+
+        self.btn_theme_toggle._icon_name = "sun" if self._settings.theme == "dark" else "moon"
+        self.btn_theme_toggle._tooltip.update_text(
+            "Switch to Light Mode"
+            if self._settings.theme == "dark"
+            else "Switch to Dark Mode"
+        )
+        self.btn_theme_toggle.update_colors()
+
         self.list_frame.configure(bg=self.c["bg_sidebar"])
         self.card_canvas.configure(bg=self.c["bg_sidebar"])
         self.card_frame.configure(bg=self.c["bg_sidebar"])
         self.btn_bar.configure(bg=self.c["bg_sidebar"])
 
         for btn in self.sidebar_buttons:
-            if btn.cget("text") == "+ Add":
-                btn.configure(bg=self.c["blue"], fg="#ffffff")
-            else:
-                btn.configure(bg=self.c["surface"], fg=self.c["fg"])
+            if hasattr(btn, "update_colors"):
+                btn.update_colors()
 
         self.main.configure(bg=self.c["bg"])
         self.code_container.configure(bg=self.c["bg"])
@@ -1381,6 +1654,15 @@ class TOTPApp:
         body.pack(fill="both", expand=True, padx=24)
 
         def _refresh_ui() -> None:
+            if hasattr(self, "btn_sync"):
+                sync_tip = (
+                    "Cloud Sync (Connected)"
+                    if self._settings.sync_token
+                    else "Cloud Sync (E2EE)"
+                )
+                self.btn_sync._tooltip.update_text(sync_tip)
+                self.btn_sync.update_colors()
+
             for w in body.winfo_children():
                 w.destroy()
 
