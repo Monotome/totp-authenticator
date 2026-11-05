@@ -91,6 +91,7 @@ Items are loosely prioritized within each milestone.
 
 These are ideas that have been raised but not yet scheduled:
 
+- Master Password Vault Reset on Desktop Lock Screen (Safe wipe with auto-backup)
 - Browser extension integration
 - TOTP token search / filter
 - Localization / i18n support

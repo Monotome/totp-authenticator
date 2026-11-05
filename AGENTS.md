@@ -93,6 +93,11 @@ Whenever modifying or generating code, AI agents **MUST** strictly adhere to the
    * **Automate PR Merge on GitHub**: The agent MUST merge the created Pull Request directly via GitHub CLI (`gh pr merge <branch> --merge --delete-branch`), eliminating the need for the user to manually visit GitHub to click merge.
    * **Local Branch Synchronization**: After merging the PR successfully on GitHub, immediately check out `main` locally (`git checkout main`), pull the latest code (`git pull origin main`), and clean up the local branch (`git branch -d <branch>`).
    * Merging into `main` is strictly performed **on GitHub via Pull Request**, never via local `git merge`.
+8. **Mandatory Documentation Synchronization (Docs-as-Code)**:
+   * Whenever adding a new feature, refactoring existing code, fixing a bug, or altering application behavior, AI agents **MUST** immediately update the relevant documentation within the same branch and commit cycle:
+     * **`CHANGELOG.md`**: Record every user-facing addition, enhancement, bug fix, or breaking change under `[Unreleased]` according to Keep a Changelog standards (`Added`, `Changed`, `Fixed`, `Deprecated`, `Removed`, `Security`).
+     * **`docs/`**: Update technical specifications, architecture docs, `ROADMAP.md`, `PROJECT_STRUCTURE.md`, or implementation notes in `docs/implementation/` whenever interfaces, data structures, APIs, or UX flows change.
+     * Documentation must never be left stale, skipped, or postponed to a later date.
 
 ---
 
@@ -286,3 +291,4 @@ Before completing any user request or committing changes:
 4. **No Secret Leaks**: Verify that no real secret keys, private credentials, or auth tokens have been added to files or Git history.
 5. **Skill Adherence**: Verify that changes adhere to the corresponding rules outlined in `.agents/skills/`.
 6. **Continuous & Incremental Commits**: Commit logical steps immediately during plan execution instead of waiting until the end to batch everything into a single massive commit.
+7. **Documentation Synchronized**: Verify that all new features, bug fixes, refactorings, or architectural changes are fully documented in `CHANGELOG.md` (under `[Unreleased]`) and relevant technical docs in `docs/` before finishing.
