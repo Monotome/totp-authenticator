@@ -83,7 +83,7 @@
       "source": "local",
       "sourceType": "project",
       "skillPath": ".agents/skills/release/SKILL.md",
-      "computedHash": "200010379ed3c4accd4057f5e78c922057f8bf6b658c0f60f3de6aa76c4fee6d"
+      "computedHash": "e206f4b5cb6cdee7723f047958f726a8d6e105e15a601800cd8865655cefa71e"
     },
     "skill-creator": {
       "source": "anthropics/skills",
