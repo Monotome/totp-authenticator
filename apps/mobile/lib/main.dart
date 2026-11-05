@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/account_provider.dart';
+import 'providers/sync_provider.dart';
 import 'screens/home_screen.dart';
 import 'theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AccountProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AccountProvider()),
+        ChangeNotifierProvider(create: (_) => SyncProvider()),
+      ],
       child: const TotpApp(),
     ),
   );
