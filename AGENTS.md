@@ -125,9 +125,22 @@ Specialized Agent Skills are stored in [`.agents/skills/`](file:///d:/Personal%2
 | **`codebase-design`** & **`improve-codebase-architecture`** | [SKILL.md](file:///d:/Personal%20Projects/2026/topt-authenticator/.agents/skills/codebase-design/SKILL.md) | **Use** when designing module boundaries, creating deep interfaces, or refactoring complex code (e.g., `app.py`). |
 | **`find-skills`** | [SKILL.md](file:///d:/Personal%20Projects/2026/topt-authenticator/.agents/skills/find-skills/SKILL.md) | **Use** when the user requests extending agent capabilities from the open agent skills ecosystem (`skills.sh`). |
 
+### F. Planning & Plan Execution
+| Skill Name | Path | Trigger & Use Cases |
+| :--- | :--- | :--- |
+| **`writing-plans`** | [SKILL.md](file:///d:/Personal%20Projects/2026/topt-authenticator/.agents/skills/writing-plans/SKILL.md) | **Must use** when you have a spec or requirements for a multi-step task before touching code. Structures plans into bite-sized tasks, defines exact interfaces, checkable test steps, and incremental commit checkpoints. |
+| **`executing-plans`** | [SKILL.md](file:///d:/Personal%20Projects/2026/topt-authenticator/.agents/skills/executing-plans/SKILL.md) | **Must use** when executing an implementation plan inline in the current session. Enforces continuous execution without stalling, strict test verification per step, explicit rulings for conflicts, and frequent atomic commits. |
+
 ---
 
 ## 5. 🛠️ Development Workflows & Cheatsheet
+
+### 📋 Feature Planning & Execution Lifecycle
+When building major features or multi-step changes:
+1. **Brainstorm & Spec**: Use `brainstorming` to explore intent, edge cases, and architectural options.
+2. **Write Implementation Plan**: Use `writing-plans` to produce a detailed task breakdown with file paths, code snippets, TDD test steps, and commit gates.
+3. **Execute Incrementally**: Use `executing-plans` to execute tasks inline with continuous test validation, ruling logs, and atomic `git commit` after each verified milestone.
+4. **Review & Audit**: Run `code-review` to inspect diffs against both project standards and original requirements.
 
 ### 🖥️ Desktop Application (`apps/ui`)
 * **Environment Setup**:
