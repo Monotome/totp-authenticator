@@ -25,6 +25,12 @@
       "skillPath": ".agents/skills/desktop-nuitka-packaging/SKILL.md",
       "computedHash": "e7be5d1202d8a4cffe4ad9e26aaf7d615ef4f04d0b120f5f4a91c19588d5a2bc"
     },
+    "executing-plans": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/executing-plans/SKILL.md",
+      "computedHash": "f695ccea105b04a4827dc3bcabb8ee88c4fc868ce853c00193ea30aaa352e1b5"
+    },
     "fastapi-backend": {
       "source": "local",
       "sourceType": "project",
@@ -83,6 +89,12 @@
       "sourceType": "github",
       "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
       "computedHash": "5d55e6285389c7a19ffe64ea7142640951823394397d900683537cb516eb30f5"
+    },
+    "writing-plans": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/writing-plans/SKILL.md",
+      "computedHash": "c2647b5bf067be353a893e5a39a632cbbeb7ad81e61fa5ae227ece5490029073"
     }
   }
 }
