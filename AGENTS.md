@@ -86,6 +86,9 @@ Whenever modifying or generating code, AI agents **MUST** strictly adhere to the
    * Never log Base32 secrets, raw passwords, or authorization tokens in console outputs, logging handlers, or UI dialogs.
 6. **Continuous Atomic Commits**:
    * During plan implementation, commit logical units and incremental milestones immediately once verified (tests pass & lint clean). **Never** delay committing until the very end to batch everything into a single mega-commit. Commit early, commit often, and keep commits atomic.
+7. **Branch Isolation (Branch off `main`)**:
+   * Whenever implementing a new feature or fixing an issue, **NEVER** develop or commit directly on the `main` branch.
+   * Always branch off from `main` by creating and checking out a dedicated feature or fix branch (`git checkout -b feat/<name>` or `git checkout -b fix/<name>`).
 
 ---
 
@@ -135,12 +138,28 @@ Specialized Agent Skills are stored in [`.agents/skills/`](file:///d:/Personal%2
 
 ## 5. 🛠️ Development Workflows & Cheatsheet
 
+### 🌿 Git & Branching Strategy
+Whenever starting a new feature or bug fix:
+1. Ensure your local `main` is up-to-date:
+   ```powershell
+   git checkout main
+   git pull origin main
+   ```
+2. Create and switch to a dedicated branch off `main`:
+   ```powershell
+   git checkout -b feat/<feature-name>   # For new features
+   # OR:
+   git checkout -b fix/<bug-name>        # For bug fixes
+   ```
+3. Commit logical units atomically on that branch during execution.
+
 ### 📋 Feature Planning & Execution Lifecycle
 When building major features or multi-step changes:
 1. **Brainstorm & Spec**: Use `brainstorming` to explore intent, edge cases, and architectural options.
-2. **Write Implementation Plan**: Use `writing-plans` to produce a detailed task breakdown with file paths, code snippets, TDD test steps, and commit gates.
-3. **Execute Incrementally**: Use `executing-plans` to execute tasks inline with continuous test validation, ruling logs, and atomic `git commit` after each verified milestone.
-4. **Review & Audit**: Run `code-review` to inspect diffs against both project standards and original requirements.
+2. **Branch Off `main`**: Create and switch to a dedicated feature branch (`feat/<name>`).
+3. **Write Implementation Plan**: Use `writing-plans` to produce a detailed task breakdown with file paths, code snippets, TDD test steps, and commit gates.
+4. **Execute Incrementally**: Use `executing-plans` to execute tasks inline with continuous test validation, ruling logs, and atomic `git commit` after each verified milestone.
+5. **Review & Audit**: Run `code-review` to inspect diffs against both project standards and original requirements.
 
 ### 🖥️ Desktop Application (`apps/ui`)
 * **Environment Setup**:
@@ -204,8 +223,9 @@ When building major features or multi-step changes:
 
 Before completing any user request or committing changes:
 
-1. **Linting Verification**: Ensure `ruff check` (for Python) or `flutter analyze` (for Flutter) returns zero errors or warnings.
-2. **Test Validation**: Run the relevant `pytest` or `flutter test` command to guarantee all existing and newly authored tests pass.
-3. **No Secret Leaks**: Verify that no real secret keys, private credentials, or auth tokens have been added to files or Git history.
-4. **Skill Adherence**: Verify that changes adhere to the corresponding rules outlined in `.agents/skills/`.
-5. **Continuous & Incremental Commits**: Commit logical steps immediately during plan execution instead of waiting until the end to batch everything into a single massive commit.
+1. **Branch Isolation**: Ensure feature/fix work is conducted on a dedicated branch checked out from `main` (`feat/*` or `fix/*`), never directly on `main`.
+2. **Linting Verification**: Ensure `ruff check` (for Python) or `flutter analyze` (for Flutter) returns zero errors or warnings.
+3. **Test Validation**: Run the relevant `pytest` or `flutter test` command to guarantee all existing and newly authored tests pass.
+4. **No Secret Leaks**: Verify that no real secret keys, private credentials, or auth tokens have been added to files or Git history.
+5. **Skill Adherence**: Verify that changes adhere to the corresponding rules outlined in `.agents/skills/`.
+6. **Continuous & Incremental Commits**: Commit logical steps immediately during plan execution instead of waiting until the end to batch everything into a single massive commit.
