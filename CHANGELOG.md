@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.6.2] - 2026-11-05
+### Added
+- **Mobile Companion App (`apps/mobile`)**: Initial cross-platform mobile client preview for Android and iOS built with Flutter.
+- **Camera QR Scanner**: Real-time camera QR scanning powered by `mobile_scanner`, custom HUD reticle, laser scan animation, and instant RFC 6238 OTP verification.
+- **Instant OTP Preview**: Real-time 6-digit preview confirmation sheet prior to saving accounts.
+- **URI & Manual Import**: Fast parsing of `otpauth://` links and manual setup key entry.
+- **Agent Skills & Workflows**: Integrated `release`, `writing-plans`, and `executing-plans` agent skills for automated development and CI/CD releases.
+
+## [v0.6.1] - 2026-03-17
+### Fixed
+- Fixed auto-lockout handling after specific time freeze scenarios.
+
+## [v0.6.0] - 2026-03-17
+### Added
+- **Cloud Sync Backend (`apps/api`)**: End-to-End Encrypted (E2EE) cloud synchronization server built with FastAPI, SQLite, and JWT authentication.
+- **E2EE Sync Client**: Zero-knowledge push/pull sync and conflict resolution inside desktop client.
+- **Docker Support**: Containerized deployment for self-hosted cloud sync backend.
+
 ## [v0.5.0] - 2026-03-14
 ### Added
 - **URI Protocol Import**: You can now import accounts by pasting an `otpauth://` link into the "Or paste otpauth:// URI" field inside the Add Account dialog.

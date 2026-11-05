@@ -2,6 +2,7 @@
 
 import httpx
 
+
 class SyncClientError(Exception):
     """Base exception for API errors."""
 
@@ -15,11 +16,11 @@ class SyncClient:
     def __init__(self, base_url: str):
         self.base_url = base_url.rstrip("/")
         self.token: str | None = None
-        
+
     def set_token(self, token: str) -> None:
         """Set the active JWT token for authentication."""
         self.token = token
-        
+
     def _headers(self) -> dict[str, str]:
         if not self.token:
             raise AuthenticationError("No authentication token available.")
@@ -42,7 +43,7 @@ class SyncClient:
             if resp.status_code == 401:
                 raise AuthenticationError("Incorrect username or password.")
             resp.raise_for_status()
-            
+
             data = resp.json()
             token: str = data["access_token"]
             self.set_token(token)

@@ -1,7 +1,7 @@
 name: totp_authenticator
 description: "TOTP Authenticator - Secure 2FA mobile app with E2EE Cloud Sync"
 publish_to: 'none'
-version: 0.7.0+1
+version: 0.6.2+1
 
 environment:
   sdk: ^3.11.3
