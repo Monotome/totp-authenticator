@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/account_provider.dart';
 import '../models/account.dart';
+import '../providers/account_provider.dart';
+import '../providers/sync_provider.dart';
 import 'add_account_screen.dart';
 import 'scan_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -11,6 +13,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AccountProvider>();
+    final syncProvider = context.watch<SyncProvider>();
     final accounts = provider.accounts;
     final remaining = provider.remainingSeconds;
     final theme = Theme.of(context);
@@ -19,11 +22,40 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('🔐 TOTP Authenticator'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () {
-              // TODO: Open settings / sync screen
-            },
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.settings_outlined),
+                tooltip: 'Cài đặt & Cloud Sync',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                },
+              ),
+              if (syncProvider.isLoggedIn)
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: Colors.greenAccent.shade400,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.green.withValues(alpha: 0.5),
+                          blurRadius: 4,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
