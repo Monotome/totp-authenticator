@@ -134,6 +134,11 @@ Specialized Agent Skills are stored in [`.agents/skills/`](file:///d:/Personal%2
 | **`writing-plans`** | [SKILL.md](file:///d:/Personal%20Projects/2026/topt-authenticator/.agents/skills/writing-plans/SKILL.md) | **Must use** when you have a spec or requirements for a multi-step task before touching code. Structures plans into bite-sized tasks, defines exact interfaces, checkable test steps, and incremental commit checkpoints. |
 | **`executing-plans`** | [SKILL.md](file:///d:/Personal%20Projects/2026/topt-authenticator/.agents/skills/executing-plans/SKILL.md) | **Must use** when executing an implementation plan inline in the current session. Enforces continuous execution without stalling, strict test verification per step, explicit rulings for conflicts, and frequent atomic commits. |
 
+### G. Release & Delivery
+| Skill Name | Path | Trigger & Use Cases |
+| :--- | :--- | :--- |
+| **`release`** | [SKILL.md](file:///d:/Personal%20Projects/2026/topt-authenticator/.agents/skills/release/SKILL.md) | **Must use** when cutting a release, bumping versions across monorepo projects, updating `CHANGELOG.md`, tagging Git releases (`v*`), or monitoring the GitHub Actions CI/CD build. |
+
 ---
 
 ## 5. 🛠️ Development Workflows & Cheatsheet
@@ -216,6 +221,21 @@ When building major features or multi-step changes:
   ```powershell
   flutter run
   ```
+
+---
+
+### 🚀 Release & Tagging Workflow
+Consult [`.agents/skills/release/SKILL.md`](file:///d:/Personal%20Projects/2026/topt-authenticator/.agents/skills/release/SKILL.md) for pre-flight verification, monorepo version sync, and release execution:
+```powershell
+# 1. Update version files and CHANGELOG.md on main
+git checkout main
+git pull origin main
+# 2. Create annotated tag
+git tag -a vX.Y.Z -m "Release vX.Y.Z: <Highlights>"
+# 3. Push to trigger GitHub Actions release pipeline
+git push origin main
+git push origin vX.Y.Z
+```
 
 ---
 

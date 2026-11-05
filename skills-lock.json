@@ -79,6 +79,12 @@
       "skillPath": ".agents/skills/python-cryptography-security/SKILL.md",
       "computedHash": "2451e7734cdabab90be25890aee97ef9d41cbcf41fd08c58290860243a1131be"
     },
+    "release": {
+      "source": "local",
+      "sourceType": "project",
+      "skillPath": ".agents/skills/release/SKILL.md",
+      "computedHash": "200010379ed3c4accd4057f5e78c922057f8bf6b658c0f60f3de6aa76c4fee6d"
+    },
     "skill-creator": {
       "source": "anthropics/skills",
       "sourceType": "github",
