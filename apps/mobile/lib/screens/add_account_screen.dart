@@ -2,9 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/account.dart';
 import '../providers/account_provider.dart';
+import '../services/qr_parser_service.dart';
+import 'scan_screen.dart';
 
 class AddAccountScreen extends StatefulWidget {
-  const AddAccountScreen({super.key});
+  final Account? initialAccount;
+
+  const AddAccountScreen({
+    super.key,
+    this.initialAccount,
+  });
 
   @override
   State<AddAccountScreen> createState() => _AddAccountScreenState();
@@ -15,6 +22,16 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   final _nameController = TextEditingController();
   final _secretController = TextEditingController();
   final _issuerController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialAccount != null) {
+      _nameController.text = widget.initialAccount!.name;
+      _secretController.text = widget.initialAccount!.secret;
+      _issuerController.text = widget.initialAccount!.issuer;
+    }
+  }
 
   @override
   void dispose() {
@@ -28,80 +45,115 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final account = Account(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: widget.initialAccount?.id ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
       name: _nameController.text.trim(),
-      secret: _secretController.text.trim().replaceAll(' ', ''),
+      secret: _secretController.text.trim().replaceAll(' ', '').toUpperCase(),
       issuer: _issuerController.text.trim(),
     );
 
     context.read<AccountProvider>().addAccount(account);
-    Navigator.pop(context);
+    Navigator.pop(context, true);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('✅ Account added successfully!'),
+        content: Text('✅ Đã lưu tài khoản "${account.name}"'),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
 
-  /// Parse an otpauth:// URI
+  /// Parse an otpauth:// URI pasted by the user
   void _pasteUri() async {
     final controller = TextEditingController();
     final uri = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Paste otpauth:// URI'),
+        title: const Text('Nhập URI otpauth://'),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(hintText: 'otpauth://totp/...'),
+          decoration: const InputDecoration(
+            hintText: 'otpauth://totp/...',
+          ),
           maxLines: 3,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, controller.text), child: const Text('Import')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: const Text('Nhập'),
+          ),
         ],
       ),
     );
-    if (uri == null || uri.isEmpty) return;
+    if (uri == null || uri.trim().isEmpty) return;
     _parseOtpauthUri(uri);
   }
 
   void _parseOtpauthUri(String raw) {
     try {
-      final uri = Uri.parse(raw);
-      if (uri.scheme != 'otpauth' || uri.host != 'totp') {
-        throw const FormatException('Not an otpauth://totp URI');
-      }
-      // Path is /Issuer:account or /account
-      var label = uri.pathSegments.isNotEmpty ? Uri.decodeComponent(uri.pathSegments.last) : '';
-      final secret = uri.queryParameters['secret'] ?? '';
-      var issuer = uri.queryParameters['issuer'] ?? '';
-
-      if (label.contains(':')) {
-        final parts = label.split(':');
-        if (issuer.isEmpty) issuer = parts[0].trim();
-        label = parts.length > 1 ? parts[1].trim() : parts[0].trim();
-      }
-
+      final parsed = QrParserService.parseOtpauthUri(raw);
       setState(() {
-        _nameController.text = label;
-        _secretController.text = secret;
-        _issuerController.text = issuer;
+        _nameController.text = parsed.name;
+        _secretController.text = parsed.secret;
+        _issuerController.text = parsed.issuer;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Đã trích xuất thông tin tài khoản thành công!'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } on QrParseException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('⚠️ ${e.message}'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Invalid URI: $e'), backgroundColor: Theme.of(context).colorScheme.error),
+        SnackBar(
+          content: Text('Lỗi: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
+    }
+  }
+
+  void _openQrScanner() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const ScanScreen()),
+    );
+    if (result == true && mounted) {
+      Navigator.pop(context, true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isEditing = widget.initialAccount != null;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Account')),
+      appBar: AppBar(
+        title: Text(isEditing ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản'),
+        actions: [
+          if (!isEditing)
+            IconButton(
+              icon: const Icon(Icons.qr_code_scanner),
+              tooltip: 'Quét mã QR',
+              onPressed: _openQrScanner,
+            ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -109,63 +161,118 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Import URI button
-              OutlinedButton.icon(
-                onPressed: _pasteUri,
-                icon: const Icon(Icons.link),
-                label: const Text('Import from otpauth:// URI'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              if (!isEditing) ...[
+                // Scan QR Code shortcut button
+                FilledButton.tonalIcon(
+                  onPressed: _openQrScanner,
+                  icon: const Icon(Icons.qr_code_scanner),
+                  label: const Text(
+                    'Quét mã QR máy ảnh',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Row(children: [
-                Expanded(child: Divider(color: theme.colorScheme.onSurface.withValues(alpha: 0.2))),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text('or enter manually', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5), fontSize: 12)),
+                const SizedBox(height: 12),
+                // Import URI button
+                OutlinedButton.icon(
+                  onPressed: _pasteUri,
+                  icon: const Icon(Icons.link),
+                  label: const Text('Nhập từ URI otpauth://'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
-                Expanded(child: Divider(color: theme.colorScheme.onSurface.withValues(alpha: 0.2))),
-              ]),
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Divider(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        'hoặc nhập thủ công',
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Divider(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ],
+
               // Issuer
               TextFormField(
                 controller: _issuerController,
                 decoration: const InputDecoration(
-                  labelText: 'Issuer (e.g. Google, GitHub)',
-                  prefixIcon: Icon(Icons.business),
+                  labelText: 'Dịch vụ / Nhà cung cấp (vd: Google, GitHub)',
+                  prefixIcon: Icon(Icons.business_outlined),
                 ),
               ),
               const SizedBox(height: 16),
+
               // Account name
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
-                  labelText: 'Account Name *',
-                  prefixIcon: Icon(Icons.person),
+                  labelText: 'Tên tài khoản (Email / Username) *',
+                  prefixIcon: Icon(Icons.person_outline),
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Account name is required' : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Vui lòng nhập tên tài khoản' : null,
               ),
               const SizedBox(height: 16),
+
               // Secret key
               TextFormField(
                 controller: _secretController,
                 decoration: const InputDecoration(
-                  labelText: 'Secret Key *',
-                  prefixIcon: Icon(Icons.key),
+                  labelText: 'Khóa bí mật (Secret Key) *',
+                  prefixIcon: Icon(Icons.key_outlined),
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Secret key is required' : null,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Vui lòng nhập khóa bí mật';
+                  }
+                  final clean = v.trim().replaceAll(' ', '').toUpperCase();
+                  if (!RegExp(r'^[A-Z2-7]+=*$').hasMatch(clean)) {
+                    return 'Khóa bí mật phải là chuỗi Base32 hợp lệ (A-Z, 2-7)';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 32),
+
               // Submit
               FilledButton.icon(
                 onPressed: _submit,
                 icon: const Icon(Icons.check),
-                label: const Text('Add Account', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                label: Text(
+                  isEditing ? 'Lưu thay đổi' : 'Thêm tài khoản',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
             ],

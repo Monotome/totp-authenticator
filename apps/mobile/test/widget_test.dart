@@ -1,11 +1,17 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:totp_authenticator/main.dart';
+import 'package:totp_authenticator/providers/account_provider.dart';
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const TotpApp(),
+      ChangeNotifierProvider(
+        create: (_) => AccountProvider(),
+        child: const TotpApp(),
+      ),
     );
-    expect(find.text('TOTP Authenticator'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('🔐 TOTP Authenticator'), findsOneWidget);
   });
 }
