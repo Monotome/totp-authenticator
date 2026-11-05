@@ -1,0 +1,133 @@
+"""Tests for modern UI components, design tokens, and avatar helpers."""
+
+import contextlib
+import tkinter as tk
+
+import pytest
+
+from totp_authenticator.app import (
+    THEMES,
+    TOTPApp,
+    get_avatar_colors,
+    get_initials,
+)
+from totp_authenticator.storage import add_account
+
+
+@pytest.fixture(scope="module")
+def tk_root():
+    root = tk.Tk()
+    root.withdraw()
+    yield root
+    with contextlib.suppress(Exception):
+        root.destroy()
+
+
+@pytest.fixture(autouse=True)
+def clean_root(tk_root):
+    for w in tk_root.winfo_children():
+        w.destroy()
+    yield
+    for w in tk_root.winfo_children():
+        w.destroy()
+
+
+@pytest.fixture(autouse=True)
+def patch_config(tmp_path, monkeypatch):
+    """Redirect CONFIG_FILE to a temp path."""
+    config_file = tmp_path / ".totp_config.json"
+    monkeypatch.setattr("totp_authenticator.storage.CONFIG_FILE", str(config_file))
+    return config_file
+
+
+def test_theme_tokens_completeness():
+    """Verify that both dark and light themes contain all required design tokens."""
+    required_keys = {
+        "bg", "bg_sidebar", "bg_card", "bg_card_hover", "bg_card_selected",
+        "bg_entry", "border", "border_focus", "fg", "fg_dim", "fg_selected",
+        "blue", "blue_hover", "green", "amber", "red", "surface", "surface_hover",
+        "progress_bg",
+    }
+    for theme_name in ("dark", "light"):
+        theme = THEMES.get(theme_name)
+        assert theme is not None
+        missing = required_keys - set(theme.keys())
+        assert not missing, f"Theme '{theme_name}' is missing keys: {missing}"
+
+
+def test_get_initials():
+    assert get_initials("Google") == "GO"
+    assert get_initials("GitHub") == "GI"
+    assert get_initials("AWS Root Account") == "AA"
+    assert get_initials("Discord Personal") == "DP"
+    assert get_initials("") == "?"
+
+
+def test_get_avatar_colors():
+    bg, fg = get_avatar_colors("GitHub")
+    assert bg.startswith("#")
+    assert fg == "#ffffff"
+
+
+def test_modern_entry_creation_and_focus(tk_root):
+    app = TOTPApp(tk_root)
+    cnt, entry = app._create_modern_entry(tk_root, width=20)
+    cnt.pack()
+    assert isinstance(cnt, tk.Frame)
+    assert isinstance(entry, tk.Entry)
+
+    # FocusIn changes container bg to border_focus
+    entry.on_focus_in()
+    assert cnt.cget("bg") == app.c["border_focus"]
+
+    # FocusOut restores border
+    entry.on_focus_out()
+    assert cnt.cget("bg") == app.c["border"]
+
+    if app._update_job:
+        tk_root.after_cancel(app._update_job)
+
+
+def test_sidebar_card_rendering_and_selection(tk_root):
+    add_account("GitHub", "JBSWY3DPEHPK3PXP")
+    add_account("Google", "JBSWY3DPEHPK3PXP")
+
+    app = TOTPApp(tk_root)
+    assert len(app._accounts) == 2
+
+    # Check card widgets are rendered for both accounts
+    assert len(app._card_widgets) == 2
+    assert app._selected_id == app._accounts[0].id
+
+    # Test navigation down switches selected account
+    app._navigate_down()
+    assert app._selected_id == app._accounts[1].id
+
+    # Test navigation up switches back
+    app._navigate_up()
+    assert app._selected_id == app._accounts[0].id
+
+    if app._update_job:
+        tk_root.after_cancel(app._update_job)
+
+
+def test_empty_state_when_no_accounts(tk_root):
+    app = TOTPApp(tk_root)
+    assert len(app._accounts) == 0
+    assert app._selected_account() is None
+    assert app.empty_frame.winfo_manager() == "pack"
+    assert not app.code_container.winfo_manager()
+
+    if app._update_job:
+        tk_root.after_cancel(app._update_job)
+
+
+def test_theme_toggle_updates_ui(tk_root):
+    app = TOTPApp(tk_root)
+    initial_theme = app._settings.theme
+    app._toggle_theme()
+    assert app._settings.theme != initial_theme
+    assert app.root.cget("bg") == app.c["bg"]
+
+    if app._update_job:
+        tk_root.after_cancel(app._update_job)
