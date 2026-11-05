@@ -3,8 +3,10 @@
 import base64
 import json
 import os
+import shutil
 import uuid
 from dataclasses import asdict, dataclass
+from datetime import datetime
 
 from totp_authenticator.crypto import (
     InvalidPasswordError,
@@ -342,3 +344,42 @@ def restore_backup(password: str, src_path: str, key: bytes | None = None) -> in
         save_accounts(current_accounts, key)
 
     return added_count
+
+
+def reset_vault(backup: bool = True) -> str | None:
+    """Reset the encrypted vault back to an unencrypted empty state.
+
+    Creates a timestamped backup copy before wiping to prevent irreversible data loss.
+
+    Args:
+        backup: Whether to create a backup file before resetting.
+
+    Returns:
+        The path of the created backup file, or None if no file existed.
+    """
+    if not os.path.exists(CONFIG_FILE):
+        return None
+
+    backup_path = None
+    if backup:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = f"{CONFIG_FILE}.bak_{timestamp}"
+        try:
+            shutil.copy2(CONFIG_FILE, backup_path)
+        except OSError:
+            backup_path = None
+
+    data = read_raw_config()
+    data["is_encrypted"] = False
+    data.pop("salt", None)
+    data.pop("encrypted_data", None)
+    data["accounts"] = []
+
+    # Preserve user preferences, but clear cloud sync token
+    if "settings" in data and isinstance(data["settings"], dict):
+        data["settings"]["sync_token"] = ""
+
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+    return backup_path

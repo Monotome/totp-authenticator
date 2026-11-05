@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- **Master Password Vault Reset & Auto-Backup (`apps/ui`)**: Added "Forgot password? Reset vault" button to the desktop App Locked screen. Includes automated timestamped backup (`~/.totp_config.json.bak_YYYYMMDD_HHMMSS`) before wiping, Catppuccin-themed safety confirmation modal requiring explicit `RESET` verification, and seamless direct transition into the main unlocked application.
 - **Mandatory Documentation Synchronization (`AGENTS.md`)**: Enforced rule requiring all future feature implementations, bug fixes, refactorings, and architecture changes to be documented in `CHANGELOG.md` and `docs/` in the same PR.
 - **Roadmap Update**: Added desktop Master Password Vault Reset & Auto-Backup to planned improvements (`docs/ROADMAP.md`).
 

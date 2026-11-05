@@ -1,6 +1,7 @@
 """Tests for totp_authenticator.storage."""
 
 import json
+import os
 
 import pytest
 
@@ -14,6 +15,7 @@ from totp_authenticator.storage import (
     load_settings,
     remove_encryption,
     rename_account,
+    reset_vault,
     save_accounts,
     save_settings,
     set_encryption,
@@ -234,3 +236,55 @@ class TestEncryption:
         accounts = load_accounts()
         assert len(accounts) == 1
         assert accounts[0].name == "Test"
+
+
+class TestResetVault:
+    """Tests for reset_vault()."""
+
+    def test_reset_vault_nonexistent_file(self):
+        assert reset_vault(backup=True) is None
+
+    def test_reset_vault_encrypted_config_with_backup(self):
+        add_account("Work", VALID_SECRET)
+        set_encryption("super_secret_123")
+        assert is_config_encrypted()
+
+        backup_path = reset_vault(backup=True)
+
+        assert backup_path is not None
+        assert os.path.exists(backup_path)
+        with open(backup_path, encoding="utf-8") as f:
+            backup_data = json.load(f)
+        assert backup_data.get("is_encrypted") is True
+        assert "encrypted_data" in backup_data
+        assert "salt" in backup_data
+
+        assert not is_config_encrypted()
+        assert load_accounts() == []
+
+    def test_reset_vault_preserves_settings_and_clears_sync_token(self):
+        settings = Settings(theme="light", window_x=120, window_y=240, sync_token="jwt.token.123")
+        save_settings(settings)
+        set_encryption("my_pass")
+
+        reset_vault(backup=True)
+
+        loaded_settings = load_settings()
+        assert loaded_settings.theme == "light"
+        assert loaded_settings.window_x == 120
+        assert loaded_settings.window_y == 240
+        assert loaded_settings.sync_token == ""
+        assert not is_config_encrypted()
+
+    def test_reset_vault_without_backup(self, patch_config):
+        add_account("Test", VALID_SECRET)
+        set_encryption("pass")
+
+        backup_path = reset_vault(backup=False)
+
+        assert backup_path is None
+        backup_files = list(patch_config.parent.glob("*.bak_*"))
+        assert len(backup_files) == 0
+        assert not is_config_encrypted()
+        assert load_accounts() == []
+
