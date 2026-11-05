@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/account_provider.dart';
+import 'providers/security_provider.dart';
 import 'providers/sync_provider.dart';
-import 'screens/home_screen.dart';
 import 'theme.dart';
+import 'widgets/auth_gate.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => SecurityProvider()),
         ChangeNotifierProvider(create: (_) => AccountProvider()),
         ChangeNotifierProvider(create: (_) => SyncProvider()),
       ],
@@ -29,7 +31,7 @@ class TotpApp extends StatelessWidget {
       themeMode: ThemeMode.dark,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      home: const HomeScreen(),
+      home: const AuthGate(),
     );
   }
 }
