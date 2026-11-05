@@ -86,10 +86,12 @@ Whenever modifying or generating code, AI agents **MUST** strictly adhere to the
    * Never log Base32 secrets, raw passwords, or authorization tokens in console outputs, logging handlers, or UI dialogs.
 6. **Continuous Atomic Commits**:
    * During plan implementation, commit logical units and incremental milestones immediately once verified (tests pass & lint clean). **Never** delay committing until the very end to batch everything into a single mega-commit. Commit early, commit often, and keep commits atomic.
-7. **Branch Isolation & PR Workflow (No Local Merges to `main`)**:
-   * Whenever implementing a new feature or fixing an issue, **NEVER** develop, commit, or merge directly into `main` locally.
-   * Always branch off from `main` by creating and checking out a dedicated feature or fix branch (`git checkout -b feat/<name>` or `git checkout -b fix/<name>`).
-   * When work is completed and verified, push the branch to remote (`git push -u origin <branch>`) and create a **Pull Request** on GitHub (using `gh pr create` or web UI).
+7. **Branch Isolation & Automated PR Merge Workflow (No Local Merges to `main`)**:
+   * Whenever implementing a new feature, fixing an issue, or preparing a release, **NEVER** develop, commit, or merge directly into `main` locally.
+   * Always branch off from `main` by creating and checking out a dedicated branch (`git checkout -b feat/<name>`, `git checkout -b fix/<name>`, or `git checkout -b chore/<name>`).
+   * When work is completed and verified, push the branch to remote (`git push -u origin <branch>`) and create a **Pull Request** on GitHub (`gh pr create`).
+   * **Automate PR Merge on GitHub**: The agent MUST merge the created Pull Request directly via GitHub CLI (`gh pr merge <branch> --merge --delete-branch`), eliminating the need for the user to manually visit GitHub to click merge.
+   * **Local Branch Synchronization**: After merging the PR successfully on GitHub, immediately check out `main` locally (`git checkout main`), pull the latest code (`git pull origin main`), and clean up the local branch (`git branch -d <branch>`).
    * Merging into `main` is strictly performed **on GitHub via Pull Request**, never via local `git merge`.
 
 ---
@@ -146,7 +148,7 @@ Specialized Agent Skills are stored in [`.agents/skills/`](file:///d:/Personal%2
 ## 5. 🛠️ Development Workflows & Cheatsheet
 
 ### 🌿 Git & Pull Request Strategy
-Whenever starting a new feature or bug fix:
+Whenever starting a new feature, bug fix, or release preparation:
 1. Ensure your local `main` is up-to-date:
    ```powershell
    git checkout main
@@ -157,6 +159,8 @@ Whenever starting a new feature or bug fix:
    git checkout -b feat/<feature-name>   # For new features
    # OR:
    git checkout -b fix/<bug-name>        # For bug fixes
+   # OR:
+   git checkout -b chore/<task-name>     # For chore/release
    ```
 3. Commit logical units atomically on that branch during execution.
 4. Push the branch to remote and create a Pull Request on GitHub:
@@ -164,13 +168,17 @@ Whenever starting a new feature or bug fix:
    git push -u origin feat/<feature-name>
    gh pr create --title "feat: <title>" --body "<description>"
    ```
-5. **NEVER** run `git merge` into `main` locally. Merging must be reviewed and executed directly on GitHub via PR.
-6. Once the PR is merged on GitHub, update your local `main`:
+5. **Merge PR directly on GitHub via CLI**:
+   ```powershell
+   gh pr merge feat/<feature-name> --merge --delete-branch
+   ```
+6. **Immediately switch back to `main` and pull latest code**:
    ```powershell
    git checkout main
    git pull origin main
    git branch -d feat/<feature-name>
    ```
+7. **NEVER** run `git merge` into `main` locally. Merging must always be executed on GitHub via Pull Request.
 
 ### 📋 Feature Planning & Execution Lifecycle
 When building major features or multi-step changes:
@@ -179,7 +187,7 @@ When building major features or multi-step changes:
 3. **Write Implementation Plan**: Use `writing-plans` to produce a detailed task breakdown with file paths, code snippets, TDD test steps, and commit gates.
 4. **Execute Incrementally**: Use `executing-plans` to execute tasks inline with continuous test validation, ruling logs, and atomic `git commit` on the branch.
 5. **Review & Audit**: Run `code-review` to inspect diffs against both project standards and original requirements.
-6. **Push & Create Pull Request**: Push branch to GitHub (`git push -u origin <branch>`) and create a PR (`gh pr create`) for review and merging on GitHub.
+6. **Push, Create PR & Auto-Merge**: Push branch to GitHub (`git push -u origin <branch>`), create a PR (`gh pr create`), merge the PR on GitHub (`gh pr merge <branch> --merge --delete-branch`), then switch back to `main` locally (`git checkout main`), pull latest code (`git pull origin main`), and delete local branch (`git branch -d <branch>`).
 
 ### 🖥️ Desktop Application (`apps/ui`)
 * **Environment Setup**:
@@ -240,15 +248,29 @@ When building major features or multi-step changes:
 ---
 
 ### 🚀 Release & Tagging Workflow
-Consult [`.agents/skills/release/SKILL.md`](file:///d:/Personal%20Projects/2026/topt-authenticator/.agents/skills/release/SKILL.md) for pre-flight verification, monorepo version sync, and release execution:
+Consult [`.agents/skills/release/SKILL.md`](file:///d:/Personal%20Projects/2026/topt-authenticator/.agents/skills/release/SKILL.md) for full instructions:
 ```powershell
-# 1. Update version files and CHANGELOG.md on main
+# 1. Checkout release branch off main
 git checkout main
 git pull origin main
-# 2. Create annotated tag
+git checkout -b chore/prepare-release-vX.Y.Z
+
+# 2. Update version files and CHANGELOG.md, run tests & linters, commit
+git add -A
+git commit -m "chore(release): prepare release vX.Y.Z"
+
+# 3. Push release branch and create PR
+git push -u origin chore/prepare-release-vX.Y.Z
+gh pr create --title "chore(release): prepare release vX.Y.Z" --body "<Highlights>"
+
+# 4. Merge PR on GitHub and pull into local main
+gh pr merge chore/prepare-release-vX.Y.Z --merge --delete-branch
+git checkout main
+git pull origin main
+git branch -d chore/prepare-release-vX.Y.Z
+
+# 5. Create annotated tag and push to trigger CI/CD release build
 git tag -a vX.Y.Z -m "Release vX.Y.Z: <Highlights>"
-# 3. Push to trigger GitHub Actions release pipeline
-git push origin main
 git push origin vX.Y.Z
 ```
 
@@ -258,7 +280,7 @@ git push origin vX.Y.Z
 
 Before completing any user request or committing changes:
 
-1. **Branch & PR Isolation**: Ensure feature/fix work is conducted on a dedicated branch checked out from `main` (`feat/*` or `fix/*`), and merged strictly via a GitHub Pull Request. Never merge branches directly into `main` locally.
+1. **Branch & Automated PR Merge**: Ensure work is conducted on a dedicated branch off `main`, merged strictly on GitHub via Pull Request (`gh pr merge --merge --delete-branch`), and local `main` is switched and pulled up to date. Never merge branches directly into `main` locally.
 2. **Linting Verification**: Ensure `ruff check` (for Python) or `flutter analyze` (for Flutter) returns zero errors or warnings.
 3. **Test Validation**: Run the relevant `pytest` or `flutter test` command to guarantee all existing and newly authored tests pass.
 4. **No Secret Leaks**: Verify that no real secret keys, private credentials, or auth tokens have been added to files or Git history.
