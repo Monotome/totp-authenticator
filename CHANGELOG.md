@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- **Modern Windows 11 Fluent UI Overhaul (`apps/ui`)**:
+  - Replaced legacy palette with crisp Modern Slate (Dark `#0b0f19` / Light `#f8fafc`) high-contrast theme tokens.
+  - Replaced rigid `tk.Listbox` with an elegant scrollable Card List featuring colored circular initial avatars, subtitles, selection stripes, and context menus.
+  - Formatted OTP codes into split groups (`123  456`) and introduced an animated countdown progress bar dynamically shifting Green $\to$ Amber $\to$ Red.
+  - Upgraded Copy button with interactive visual feedback (`✓ Copied to Clipboard!`).
+  - Redesigned Empty State with a dedicated security shield illustration and prominent Add Account CTA.
+  - Modernized all 4 dialogs (Add Account, Cloud Sync, Security Settings, Reset Vault) with 1px outlined entries, dynamic focus rings, and zero retro 3D bevels.
 
 ## [v0.7.1] - 2026-11-05
 ### Added

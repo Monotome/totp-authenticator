@@ -77,11 +77,15 @@ Items are loosely prioritized within each milestone.
 
 ---
 
-## 🔐 v0.8.0 — Desktop Vault Recovery (Current)
+## 🔐 v0.8.0 — Desktop Vault Recovery & Modern UI (Current)
 
 - [x] Master Password Vault Reset on Desktop Lock Screen (Safe wipe with auto-backup)
 - [x] Catppuccin-themed safety confirmation modal with `RESET` verification
 - [x] Direct transition to unlocked state without restarting application
+- [x] Modern Windows 11 Slate & Fluent UI overhaul (Card-based sidebar, circular avatars, focus-ring inputs)
+- [x] Animated OTP countdown progress bar and split-code display
+- [x] Polished empty state with dedicated onboarding illustration
+- [x] Modernized modal dialogs (Add Account, Cloud Sync, Security Settings) with zero 3D bevels
 
 ---
 

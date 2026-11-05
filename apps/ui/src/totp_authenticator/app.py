@@ -1,4 +1,4 @@
-"""TOTP Authenticator UI — tkinter-based desktop window (v0.2.0 multi-account)."""
+"""TOTP Authenticator UI — modern Windows 11 Fluent Tkinter desktop interface."""
 
 import time
 import tkinter as tk
@@ -6,7 +6,7 @@ from tkinter import filedialog, messagebox, simpledialog
 
 import pyperclip
 
-from totp_authenticator.api import AuthenticationError, ConflictError, SyncClientError
+from totp_authenticator.api import ConflictError
 from totp_authenticator.core import get_code, get_remaining_seconds, validate_secret
 from totp_authenticator.crypto import InvalidPasswordError
 from totp_authenticator.parser import InvalidURIError, parse_uri
@@ -28,33 +28,77 @@ from totp_authenticator.storage import (
 )
 from totp_authenticator.sync_manager import SyncManager
 
-# ── Colour palettes (Catppuccin Mocha for Dark, Latte for Light) ───────────
+# ── Colour palettes (Windows 11 Fluent & Modern Slate) ─────────────────────
 THEMES = {
     "dark": {
-        "bg": "#1e1e2e",
-        "bg_sidebar": "#181825",
-        "bg_entry": "#313244",
-        "fg": "#cdd6f4",
-        "fg_dim": "#6c7086",
-        "fg_selected": "#89b4fa",
-        "green": "#a6e3a1",
-        "red": "#f38ba8",
-        "blue": "#89b4fa",
-        "surface": "#45475a",
+        "bg": "#0b0f19",
+        "bg_sidebar": "#111827",
+        "bg_card": "#1e293b",
+        "bg_card_hover": "#283548",
+        "bg_card_selected": "#1e3a5f",
+        "bg_entry": "#1e293b",
+        "border": "#334155",
+        "border_focus": "#38bdf8",
+        "fg": "#f8fafc",
+        "fg_dim": "#94a3b8",
+        "fg_selected": "#38bdf8",
+        "blue": "#2563eb",
+        "blue_hover": "#1d4ed8",
+        "green": "#22c55e",
+        "amber": "#f59e0b",
+        "red": "#ef4444",
+        "surface": "#1e293b",
+        "surface_hover": "#334155",
+        "progress_bg": "#1e293b",
     },
     "light": {
-        "bg": "#eff1f5",
-        "bg_sidebar": "#e6e9ef",
-        "bg_entry": "#dce0e8",
-        "fg": "#4c4f69",
-        "fg_dim": "#8c8fa1",
-        "fg_selected": "#1e66f5",
-        "green": "#40a02b",
-        "red": "#d20f39",
-        "blue": "#1e66f5",
-        "surface": "#ccd0da",
+        "bg": "#f8fafc",
+        "bg_sidebar": "#f1f5f9",
+        "bg_card": "#ffffff",
+        "bg_card_hover": "#f1f5f9",
+        "bg_card_selected": "#e0f2fe",
+        "bg_entry": "#ffffff",
+        "border": "#cbd5e1",
+        "border_focus": "#2563eb",
+        "fg": "#0f172a",
+        "fg_dim": "#64748b",
+        "fg_selected": "#0284c7",
+        "blue": "#2563eb",
+        "blue_hover": "#1d4ed8",
+        "green": "#16a34a",
+        "amber": "#d97706",
+        "red": "#dc2626",
+        "surface": "#e2e8f0",
+        "surface_hover": "#cbd5e1",
+        "progress_bg": "#e2e8f0",
     },
 }
+
+AVATAR_PALETTE = [
+    ("#2563eb", "#ffffff"),  # Blue
+    ("#7c3aed", "#ffffff"),  # Purple
+    ("#db2777", "#ffffff"),  # Pink
+    ("#059669", "#ffffff"),  # Emerald
+    ("#d97706", "#ffffff"),  # Amber
+    ("#0891b2", "#ffffff"),  # Cyan
+    ("#4f46e5", "#ffffff"),  # Indigo
+]
+
+
+def get_avatar_colors(name: str) -> tuple[str, str]:
+    """Deterministically pick an avatar background and foreground color."""
+    idx = sum(ord(c) for c in name) % len(AVATAR_PALETTE)
+    return AVATAR_PALETTE[idx]
+
+
+def get_initials(name: str) -> str:
+    """Get 1-2 character initials for an account display."""
+    parts = name.strip().split()
+    if not parts:
+        return "?"
+    if len(parts) == 1:
+        return parts[0][:2].upper()
+    return (parts[0][0] + parts[-1][0]).upper()
 
 
 class TOTPApp:
@@ -69,9 +113,11 @@ class TOTPApp:
         self._settings = load_settings()
         self.c = THEMES.get(self._settings.theme, THEMES["dark"])
 
-        width, height = 620, 400
+        width, height = 680, 430
         if self._settings.window_x is not None and self._settings.window_y is not None:
-            self.root.geometry(f"{width}x{height}+{self._settings.window_x}+{self._settings.window_y}")
+            self.root.geometry(
+                f"{width}x{height}+{self._settings.window_x}+{self._settings.window_y}"
+            )
         else:
             self.root.geometry(f"{width}x{height}")
 
@@ -80,6 +126,7 @@ class TOTPApp:
         self._current_key: bytes | None = None
         self._last_activity = time.time()
         self._update_job: str | None = None
+        self._card_widgets: dict[str, list[tk.Widget]] = {}
 
         # Track window moves to save config
         self.root.bind("<Configure>", self._on_window_configure)
@@ -150,37 +197,128 @@ class TOTPApp:
 
         self._build_lock_screen()
 
-    # ── Build ──────────────────────────────────────────────────────────────────
+    # ── UI Builder Helpers ─────────────────────────────────────────────────────
+
+    def _create_modern_entry(
+        self,
+        parent: tk.Widget,
+        width: int = 28,
+        show: str = "",
+        justify: str = "left",
+    ) -> tuple[tk.Frame, tk.Entry]:
+        """Create a modern styled text entry with a 1px border and focus ring."""
+        container = tk.Frame(parent, bg=self.c["border"], padx=1, pady=1)
+        entry = tk.Entry(
+            container,
+            font=("Segoe UI", 10),
+            bg=self.c["bg_entry"],
+            fg=self.c["fg"],
+            relief="flat",
+            insertbackground=self.c["fg"],
+            width=width,
+            show=show,
+            justify=justify,
+        )
+        entry.pack(fill="both", expand=True, ipady=5, padx=6)
+
+        def _on_focus_in(_event: tk.Event = None) -> None:  # type: ignore[assignment]
+            container.configure(bg=self.c["border_focus"])
+
+        def _on_focus_out(_event: tk.Event = None) -> None:  # type: ignore[assignment]
+            container.configure(bg=self.c["border"])
+
+        entry.bind("<FocusIn>", _on_focus_in)
+        entry.bind("<FocusOut>", _on_focus_out)
+        entry.on_focus_in = _on_focus_in  # type: ignore[attr-defined]
+        entry.on_focus_out = _on_focus_out  # type: ignore[attr-defined]
+        return container, entry
+
+    def _create_pill_button(
+        self,
+        parent: tk.Widget,
+        text: str,
+        command: object,
+        is_primary: bool = False,
+        is_danger: bool = False,
+        font: tuple = ("Segoe UI", 9, "bold"),
+        padx: int = 14,
+        pady: int = 5,
+    ) -> tk.Button:
+        """Create a modern button with flat relief and hover highlight."""
+        if is_danger:
+            bg = self.c["red"]
+            fg = "#ffffff"
+            hover_bg = "#b91c1c"
+        elif is_primary:
+            bg = self.c["blue"]
+            fg = "#ffffff"
+            hover_bg = self.c["blue_hover"]
+        else:
+            bg = self.c["surface"]
+            fg = self.c["fg"]
+            hover_bg = self.c["surface_hover"]
+
+        btn = tk.Button(
+            parent,
+            text=text,
+            font=font,
+            bg=bg,
+            fg=fg,
+            activebackground=hover_bg,
+            activeforeground=fg,
+            relief="flat",
+            borderwidth=0,
+            padx=padx,
+            pady=pady,
+            cursor="hand2",
+            command=command,
+        )
+
+        def _on_enter(_e: tk.Event) -> None:
+            btn.configure(bg=hover_bg)
+
+        def _on_leave(_e: tk.Event) -> None:
+            btn.configure(bg=bg)
+
+        btn.bind("<Enter>", _on_enter)
+        btn.bind("<Leave>", _on_leave)
+        return btn
+
+    # ── Main UI Tree ───────────────────────────────────────────────────────────
 
     def _build_ui(self) -> None:
         """Construct the two-panel widget tree."""
         # ── Sidebar (left) ─────────────────────────────────────────────────────
-        self.sidebar = tk.Frame(self.root, bg=self.c["bg_sidebar"], width=190)
+        self.sidebar = tk.Frame(self.root, bg=self.c["bg_sidebar"], width=230)
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.pack_propagate(False)
 
-        # Header contains "Accounts" label and Theme Toggle button
+        # Header contains "Accounts" label and action buttons
         self.header_frame = tk.Frame(self.sidebar, bg=self.c["bg_sidebar"])
-        self.header_frame.pack(fill="x", pady=(16, 6), padx=12)
+        self.header_frame.pack(fill="x", pady=(16, 10), padx=12)
 
         self.lbl_accounts = tk.Label(
-            self.header_frame, text="Accounts", font=("Segoe UI", 10, "bold"),
-            bg=self.c["bg_sidebar"], fg=self.c["fg_dim"],
+            self.header_frame,
+            text="Accounts (0)",
+            font=("Segoe UI", 11, "bold"),
+            bg=self.c["bg_sidebar"],
+            fg=self.c["fg"],
         )
         self.lbl_accounts.pack(side="left")
 
-        self.btn_security = tk.Button(
+        # Header Action Buttons
+        self.btn_theme_toggle = tk.Button(
             self.header_frame,
-            text="⚙️",
+            text="☀️" if self._settings.theme == "dark" else "🌙",
             font=("Segoe UI", 10),
             bg=self.c["bg_sidebar"],
             fg=self.c["fg_dim"],
             relief="flat",
             borderwidth=0,
             cursor="hand2",
-            command=self._open_security_dialog,
+            command=self._toggle_theme,
         )
-        self.btn_security.pack(side="right", padx=(0, 8))
+        self.btn_theme_toggle.pack(side="right", padx=(2, 0))
 
         self.btn_sync = tk.Button(
             self.header_frame,
@@ -193,90 +331,214 @@ class TOTPApp:
             cursor="hand2",
             command=self._open_sync_dialog,
         )
-        self.btn_sync.pack(side="right", padx=(0, 4))
+        self.btn_sync.pack(side="right", padx=2)
 
-        self.btn_theme_toggle = tk.Button(
+        self.btn_security = tk.Button(
             self.header_frame,
-            text="☀️" if self._settings.theme == "dark" else "🌙",
+            text="⚙️",
             font=("Segoe UI", 10),
             bg=self.c["bg_sidebar"],
             fg=self.c["fg_dim"],
             relief="flat",
             borderwidth=0,
             cursor="hand2",
-            command=self._toggle_theme,
+            command=self._open_security_dialog,
         )
-        self.btn_theme_toggle.pack(side="right")
+        self.btn_security.pack(side="right", padx=2)
 
-        # Account listbox
+        # Card-based scrollable container
         self.list_frame = tk.Frame(self.sidebar, bg=self.c["bg_sidebar"])
-        self.list_frame.pack(fill="both", expand=True, padx=8)
+        self.list_frame.pack(fill="both", expand=True, padx=4)
 
-        self.listbox = tk.Listbox(
-            self.list_frame, bg=self.c["bg_sidebar"], fg=self.c["fg"],
-            selectbackground=self.c["bg_entry"], selectforeground=self.c["fg_selected"],
-            font=("Segoe UI", 10), relief="flat", borderwidth=0,
-            highlightthickness=0, activestyle="none", cursor="hand2",
+        self.card_canvas = tk.Canvas(
+            self.list_frame,
+            bg=self.c["bg_sidebar"],
+            highlightthickness=0,
+            borderwidth=0,
         )
-        self.listbox.pack(fill="both", expand=True)
-        self.listbox.bind("<<ListboxSelect>>", self._on_select)
+        self.card_frame = tk.Frame(self.card_canvas, bg=self.c["bg_sidebar"])
+        self.card_window = self.card_canvas.create_window(
+            (0, 0), window=self.card_frame, anchor="nw"
+        )
+
+        def _on_card_frame_configure(_e: tk.Event = None) -> None:  # type: ignore[assignment]
+            self.card_canvas.configure(scrollregion=self.card_canvas.bbox("all"))
+
+        def _on_card_canvas_configure(e: tk.Event) -> None:
+            self.card_canvas.itemconfig(self.card_window, width=e.width)
+
+        self.card_frame.bind("<Configure>", _on_card_frame_configure)
+        self.card_canvas.bind("<Configure>", _on_card_canvas_configure)
+        self.card_canvas.pack(side="left", fill="both", expand=True)
+
+        def _on_mousewheel(e: tk.Event) -> None:
+            self.card_canvas.yview_scroll(int(-1 * (e.delta / 120)), "units")
+
+        self.card_canvas.bind(
+            "<Enter>", lambda _e: self.card_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        )
+        self.card_canvas.bind(
+            "<Leave>", lambda _e: self.card_canvas.unbind_all("<MouseWheel>")
+        )
 
         # Sidebar action buttons
         self.btn_bar = tk.Frame(self.sidebar, bg=self.c["bg_sidebar"])
-        self.btn_bar.pack(fill="x", padx=8, pady=(6, 12))
+        self.btn_bar.pack(fill="x", padx=10, pady=(8, 12))
 
         self.sidebar_buttons = []
-        for text, cmd in [
-            ("+ Add", self._open_add_dialog),
-            ("Rename", self._open_rename_dialog),
-            ("Delete", self._open_delete_dialog),
-        ]:
-            btn = tk.Button(
-                self.btn_bar, text=text, font=("Segoe UI", 9),
-                bg=self.c["surface"], fg=self.c["fg"], relief="flat",
-                padx=8, pady=4, cursor="hand2", command=cmd,
-            )
-            btn.pack(side="left", padx=2)
-            self.sidebar_buttons.append(btn)
+
+        btn_add = self._create_pill_button(
+            self.btn_bar,
+            text="+ Add",
+            command=self._open_add_dialog,
+            is_primary=True,
+            font=("Segoe UI", 9, "bold"),
+            padx=10,
+            pady=4,
+        )
+        btn_add.pack(side="left", padx=(0, 4))
+        self.sidebar_buttons.append(btn_add)
+
+        btn_rename = self._create_pill_button(
+            self.btn_bar,
+            text="Rename",
+            command=self._open_rename_dialog,
+            font=("Segoe UI", 9),
+            padx=8,
+            pady=4,
+        )
+        btn_rename.pack(side="left", padx=2)
+        self.sidebar_buttons.append(btn_rename)
+
+        btn_delete = self._create_pill_button(
+            self.btn_bar,
+            text="Delete",
+            command=self._open_delete_dialog,
+            font=("Segoe UI", 9),
+            padx=8,
+            pady=4,
+        )
+        btn_delete.pack(side="left", padx=2)
+        self.sidebar_buttons.append(btn_delete)
 
         # ── Main panel (right) ─────────────────────────────────────────────────
         self.main = tk.Frame(self.root, bg=self.c["bg"])
         self.main.pack(side="left", fill="both", expand=True)
 
+        # 1. Active Code Display Container
+        self.code_container = tk.Frame(self.main, bg=self.c["bg"])
+
         self.account_name_var = tk.StringVar(value="")
         self.lbl_acc_name = tk.Label(
-            self.main, textvariable=self.account_name_var,
-            font=("Segoe UI", 11, "bold"), bg=self.c["bg"], fg=self.c["fg_dim"],
+            self.code_container,
+            textvariable=self.account_name_var,
+            font=("Segoe UI", 15, "bold"),
+            bg=self.c["bg"],
+            fg=self.c["fg"],
         )
-        self.lbl_acc_name.pack(pady=(28, 0))
+        self.lbl_acc_name.pack(pady=(40, 4))
+
+        self.lbl_acc_badge = tk.Label(
+            self.code_container,
+            text="RFC 6238 · SHA-1 · 30s",
+            font=("Segoe UI", 8, "bold"),
+            bg=self.c["surface"],
+            fg=self.c["fg_dim"],
+            padx=8,
+            pady=2,
+        )
+        self.lbl_acc_badge.pack(pady=(0, 16))
 
         self.code_var = tk.StringVar(value="------")
         self.code_label = tk.Label(
-            self.main, textvariable=self.code_var,
-            font=("Courier New", 42, "bold"), bg=self.c["bg"], fg=self.c["green"],
+            self.code_container,
+            textvariable=self.code_var,
+            font=("Segoe UI", 38, "bold"),
+            bg=self.c["bg"],
+            fg=self.c["green"],
         )
-        self.code_label.pack(pady=(4, 0))
+        self.code_label.pack(pady=(0, 6))
+
+        # Modern Progress Bar
+        self.progress_canvas = tk.Canvas(
+            self.code_container,
+            width=240,
+            height=6,
+            bg=self.c["progress_bg"],
+            highlightthickness=0,
+            borderwidth=0,
+        )
+        self.progress_canvas.pack(pady=(0, 6))
 
         self.timer_var = tk.StringVar(value="")
         self.lbl_timer = tk.Label(
-            self.main, textvariable=self.timer_var,
-            font=("Segoe UI", 9), bg=self.c["bg"], fg=self.c["fg_dim"],
+            self.code_container,
+            textvariable=self.timer_var,
+            font=("Segoe UI", 9),
+            bg=self.c["bg"],
+            fg=self.c["fg_dim"],
         )
-        self.lbl_timer.pack()
+        self.lbl_timer.pack(pady=(0, 18))
 
         self.copy_btn = tk.Button(
-            self.main, text="📋  Copy Code", font=("Segoe UI", 11, "bold"),
-            bg=self.c["blue"], fg=self.c["bg"], relief="flat", padx=24, pady=8,
-            cursor="hand2", command=self._copy_code,
+            self.code_container,
+            text="📋  Copy Code",
+            font=("Segoe UI", 10, "bold"),
+            bg=self.c["blue"],
+            fg="#ffffff",
+            activebackground=self.c["blue_hover"],
+            activeforeground="#ffffff",
+            relief="flat",
+            borderwidth=0,
+            padx=24,
+            pady=7,
+            cursor="hand2",
+            command=self._copy_code,
         )
-        self.copy_btn.pack(pady=20)
+        self.copy_btn.pack(pady=(0, 10))
 
-        self.hint_var = tk.StringVar(value="")
-        self.lbl_hint = tk.Label(
-            self.main, textvariable=self.hint_var, font=("Segoe UI", 9),
-            bg=self.c["bg"], fg=self.c["fg_dim"], wraplength=360, justify="center",
+        # 2. Empty State Container
+        self.empty_frame = tk.Frame(self.main, bg=self.c["bg"])
+
+        icon_cv = tk.Canvas(
+            self.empty_frame,
+            width=56,
+            height=56,
+            bg=self.c["bg"],
+            highlightthickness=0,
         )
-        self.lbl_hint.pack()
+        icon_cv.pack(pady=(60, 14))
+        icon_cv.create_oval(4, 4, 52, 52, fill=self.c["surface"], outline="")
+        icon_cv.create_text(28, 28, text="🔐", font=("Segoe UI", 20))
+
+        tk.Label(
+            self.empty_frame,
+            text="No Accounts Yet",
+            font=("Segoe UI", 14, "bold"),
+            bg=self.c["bg"],
+            fg=self.c["fg"],
+        ).pack(pady=(0, 6))
+
+        tk.Label(
+            self.empty_frame,
+            text="Add your first 2FA account to begin generating secure time-based OTP codes.",
+            font=("Segoe UI", 9),
+            bg=self.c["bg"],
+            fg=self.c["fg_dim"],
+            wraplength=280,
+            justify="center",
+        ).pack(pady=(0, 20))
+
+        btn_empty_add = self._create_pill_button(
+            self.empty_frame,
+            text="➕  Add Your First Account",
+            command=self._open_add_dialog,
+            is_primary=True,
+            font=("Segoe UI", 10, "bold"),
+            padx=20,
+            pady=8,
+        )
+        btn_empty_add.pack()
 
     def _toggle_theme(self) -> None:
         """Switch between light and dark themes and update UI."""
@@ -287,58 +549,144 @@ class TOTPApp:
         self.root.configure(bg=self.c["bg"])
         self.sidebar.configure(bg=self.c["bg_sidebar"])
         self.header_frame.configure(bg=self.c["bg_sidebar"])
-        self.lbl_accounts.configure(bg=self.c["bg_sidebar"], fg=self.c["fg_dim"])
+        self.lbl_accounts.configure(bg=self.c["bg_sidebar"], fg=self.c["fg"])
         self.btn_security.configure(bg=self.c["bg_sidebar"], fg=self.c["fg_dim"])
         self.btn_sync.configure(bg=self.c["bg_sidebar"], fg=self.c["fg_dim"])
         self.btn_theme_toggle.configure(
-            bg=self.c["bg_sidebar"], fg=self.c["fg_dim"],
-            text="☀️" if self._settings.theme == "dark" else "🌙"
+            bg=self.c["bg_sidebar"],
+            fg=self.c["fg_dim"],
+            text="☀️" if self._settings.theme == "dark" else "🌙",
         )
         self.list_frame.configure(bg=self.c["bg_sidebar"])
-        self.listbox.configure(
-            bg=self.c["bg_sidebar"], fg=self.c["fg"],
-            selectbackground=self.c["bg_entry"], selectforeground=self.c["fg_selected"]
-        )
+        self.card_canvas.configure(bg=self.c["bg_sidebar"])
+        self.card_frame.configure(bg=self.c["bg_sidebar"])
         self.btn_bar.configure(bg=self.c["bg_sidebar"])
+
         for btn in self.sidebar_buttons:
-            btn.configure(bg=self.c["surface"], fg=self.c["fg"])
+            if btn.cget("text") == "+ Add":
+                btn.configure(bg=self.c["blue"], fg="#ffffff")
+            else:
+                btn.configure(bg=self.c["surface"], fg=self.c["fg"])
 
         self.main.configure(bg=self.c["bg"])
-        self.lbl_acc_name.configure(bg=self.c["bg"], fg=self.c["fg_dim"])
+        self.code_container.configure(bg=self.c["bg"])
+        self.lbl_acc_name.configure(bg=self.c["bg"], fg=self.c["fg"])
+        self.lbl_acc_badge.configure(bg=self.c["surface"], fg=self.c["fg_dim"])
         self.code_label.configure(bg=self.c["bg"])
         self.lbl_timer.configure(bg=self.c["bg"], fg=self.c["fg_dim"])
-        self.lbl_hint.configure(bg=self.c["bg"], fg=self.c["fg_dim"])
-        self.copy_btn.configure(bg=self.c["blue"], fg=self.c["bg"])
+        self.progress_canvas.configure(bg=self.c["progress_bg"])
+        self.copy_btn.configure(bg=self.c["blue"], fg="#ffffff")
 
-    # ── Sidebar helpers ────────────────────────────────────────────────────────
+        self.empty_frame.configure(bg=self.c["bg"])
+        for w in self.empty_frame.winfo_children():
+            if isinstance(w, tk.Label):
+                is_title = "Accounts" in w.cget("text")
+                w.configure(bg=self.c["bg"], fg=self.c["fg"] if is_title else self.c["fg_dim"])
+
+        self._refresh_sidebar()
+
+    # ── Sidebar & Account Cards ────────────────────────────────────────────────
 
     def _refresh_sidebar(self) -> None:
-        """Rebuild the listbox from in-memory accounts list."""
-        self.listbox.delete(0, "end")
+        """Rebuild the card list from in-memory accounts list."""
+        self.lbl_accounts.configure(text=f"Accounts ({len(self._accounts)})")
+
+        for w in self.card_frame.winfo_children():
+            w.destroy()
+        self._card_widgets.clear()
+
+        # Context Menu
+        menu = tk.Menu(self.root, tearoff=0)
+        menu.add_command(label="📋  Copy Code", command=self._copy_code)
+        menu.add_command(label="✏️  Rename", command=self._open_rename_dialog)
+        menu.add_command(label="🗑️  Delete", command=self._open_delete_dialog)
+
+        # Context menu launcher
+        def _popup_menu(e: tk.Event, acc_id: str) -> None:
+            self._select_account(acc_id)
+            menu.tk_popup(e.x_root, e.y_root)
+
         for account in self._accounts:
-            self.listbox.insert("end", f"  {account.name}")
+            is_selected = account.id == self._selected_id
+            card_bg = self.c["bg_card_selected"] if is_selected else self.c["bg_sidebar"]
+            name_color = self.c["fg_selected"] if is_selected else self.c["fg"]
 
-        # Re-select previously selected account
-        if self._selected_id:
-            idx = self._index_of(self._selected_id)
-            if idx is not None:
-                self.listbox.selection_set(idx)
-                self.listbox.activate(idx)
-            else:
-                # Selected account was deleted; fall back to first
-                self._selected_id = self._accounts[0].id if self._accounts else None
-                if self._selected_id:
-                    self.listbox.selection_set(0)
+            card = tk.Frame(self.card_frame, bg=card_bg, cursor="hand2")
+            card.pack(fill="x", padx=6, pady=2)
+
+            stripe = tk.Frame(
+                card,
+                width=3,
+                bg=self.c["blue"] if is_selected else card_bg,
+            )
+            stripe.pack(side="left", fill="y", padx=(0, 6))
+
+            # Avatar circle
+            av_bg, av_fg = get_avatar_colors(account.name)
+            initials = get_initials(account.name)
+
+            cv = tk.Canvas(card, width=30, height=30, bg=card_bg, highlightthickness=0)
+            cv.pack(side="left", padx=(0, 8), pady=4)
+            cv.create_oval(2, 2, 28, 28, fill=av_bg, outline="")
+            cv.create_text(15, 15, text=initials, fill=av_fg, font=("Segoe UI", 9, "bold"))
+
+            text_box = tk.Frame(card, bg=card_bg)
+            text_box.pack(side="left", fill="x", expand=True, pady=4)
+
+            lbl_name = tk.Label(
+                text_box,
+                text=account.name,
+                font=("Segoe UI", 9, "bold"),
+                bg=card_bg,
+                fg=name_color,
+                anchor="w",
+            )
+            lbl_name.pack(fill="x")
+
+            lbl_sub = tk.Label(
+                text_box,
+                text="TOTP · 30s",
+                font=("Segoe UI", 8),
+                bg=card_bg,
+                fg=self.c["fg_dim"],
+                anchor="w",
+            )
+            lbl_sub.pack(fill="x")
+
+            widgets = [card, stripe, cv, text_box, lbl_name, lbl_sub]
+            self._card_widgets[account.id] = widgets
+
+            acc_id = account.id
+
+            def _on_click(_e: tk.Event, i: str = acc_id) -> None:
+                self._select_account(i)
+
+            def _on_hover_enter(
+                _e: tk.Event, wl: list[tk.Widget] = widgets, i: str = acc_id
+            ) -> None:
+                if i != self._selected_id:
+                    for widget in (wl[0], wl[2], wl[3], wl[4], wl[5]):
+                        widget.configure(bg=self.c["bg_card_hover"])
+
+            def _on_hover_leave(
+                _e: tk.Event, wl: list[tk.Widget] = widgets, i: str = acc_id
+            ) -> None:
+                if i != self._selected_id:
+                    for widget in (wl[0], wl[2], wl[3], wl[4], wl[5]):
+                        widget.configure(bg=self.c["bg_sidebar"])
+
+            for w in widgets:
+                w.bind("<Button-1>", _on_click)
+                w.bind("<Button-3>", lambda e, i=acc_id: _popup_menu(e, i))
+                w.bind("<Enter>", _on_hover_enter)
+                w.bind("<Leave>", _on_hover_leave)
 
         self._refresh_main_panel()
 
-    def _on_select(self, _event: tk.Event) -> None:  # type: ignore[type-arg]
-        """Handle listbox selection change."""
-        sel = self.listbox.curselection()
-        if not sel:
-            return
-        self._selected_id = self._accounts[sel[0]].id
-        self._refresh_main_panel()
+    def _select_account(self, account_id: str) -> None:
+        """Select an account by id and update UI views."""
+        self._selected_id = account_id
+        self._refresh_sidebar()
 
     def _selected_account(self) -> Account | None:
         """Return the currently selected Account, or None."""
@@ -354,98 +702,112 @@ class TOTPApp:
                 return i
         return None
 
-    def _navigate_up(self, _event: tk.Event = None) -> None:  # type: ignore[type-arg, assignment]
+    def _navigate_up(self, _event: tk.Event = None) -> None:  # type: ignore[assignment]
         """Select the previous account via keyboard."""
         if not self._accounts:
             return
         idx = self._index_of(self._selected_id) if self._selected_id else 0
         idx = max(0, (idx or 0) - 1)
-        self.listbox.selection_clear(0, "end")
-        self.listbox.selection_set(idx)
-        self.listbox.activate(idx)
-        self.listbox.see(idx)
-        self._on_select(None)
+        self._select_account(self._accounts[idx].id)
 
-    def _navigate_down(self, _event: tk.Event = None) -> None:  # type: ignore[type-arg, assignment]
+    def _navigate_down(self, _event: tk.Event = None) -> None:  # type: ignore[assignment]
         """Select the next account via keyboard."""
         if not self._accounts:
             return
         idx = self._index_of(self._selected_id) if self._selected_id else -1
         idx = min(len(self._accounts) - 1, (idx if idx is not None else -1) + 1)
-        self.listbox.selection_clear(0, "end")
-        self.listbox.selection_set(idx)
-        self.listbox.activate(idx)
-        self.listbox.see(idx)
-        self._on_select(None)
+        self._select_account(self._accounts[idx].id)
 
     def _on_window_configure(self, event: tk.Event) -> None:  # type: ignore[type-arg]
         """Save the window position when it is moved."""
         if event.widget == self.root:
             self._settings.window_x = self.root.winfo_x()
             self._settings.window_y = self.root.winfo_y()
-            # We don't save to file immediately to avoid spamming disk IO;
-            # this gets saved via save_settings on Exit or Theme toggle.
 
-    # ── Main panel helpers ─────────────────────────────────────────────────────
+    # ── Main Panel Helpers ─────────────────────────────────────────────────────
 
     def _refresh_main_panel(self) -> None:
-        """Update main panel labels to reflect the selected account."""
+        """Update main panel labels to reflect the selected account or show empty state."""
         account = self._selected_account()
         if account:
+            self.empty_frame.pack_forget()
+            self.code_container.pack(fill="both", expand=True)
             self.account_name_var.set(account.name)
-            self.hint_var.set("")
             self.copy_btn.config(state="normal")
         else:
+            self.code_container.pack_forget()
+            self.empty_frame.pack(fill="both", expand=True)
             self.account_name_var.set("")
             self.code_var.set("------")
             self.timer_var.set("")
-            self.hint_var.set('Click "+ Add" to add your first account.')
             self.copy_btn.config(state="disabled")
+
+    def _update_progress_bar(self, remaining: int, color: str) -> None:
+        """Draw an animated horizontal progress bar."""
+        if not hasattr(self, "progress_canvas"):
+            return
+        self.progress_canvas.delete("all")
+        width = 240
+        height = 6
+        self.progress_canvas.create_rectangle(
+            0, 0, width, height, fill=self.c["progress_bg"], outline=""
+        )
+        bar_w = int(width * (max(0, min(30, remaining)) / 30.0))
+        if bar_w > 0:
+            self.progress_canvas.create_rectangle(
+                0, 0, bar_w, height, fill=color, outline=""
+            )
 
     # ── Dialogs ────────────────────────────────────────────────────────────────
 
     def _open_add_dialog(self) -> None:
-        """Open a dialog to add a new account."""
+        """Open a modern dialog to add a new account."""
         dialog = tk.Toplevel(self.root)
         dialog.title("Add Account")
-        dialog.geometry("360x250")
+        dialog.geometry("420x350")
         dialog.configure(bg=self.c["bg"])
         dialog.resizable(False, False)
         dialog.grab_set()
         dialog.attributes("-topmost", True)
 
-        for row, (label_text, _) in enumerate(
-            [("Account Name:", ""), ("Secret Key:", "*")]
-        ):
-            tk.Label(
-                dialog, text=label_text, font=("Segoe UI", 10), bg=self.c["bg"], fg=self.c["fg"]
-            ).grid(row=row, column=0, padx=16, pady=(18 if row == 0 else 8, 4), sticky="w")
+        # Header
+        header = tk.Frame(dialog, bg=self.c["bg"])
+        header.pack(fill="x", padx=24, pady=(20, 14))
 
-        name_entry = tk.Entry(
-            dialog, font=("Segoe UI", 10), bg=self.c["bg_entry"], fg=self.c["fg"],
-            relief="flat", insertbackground="white", width=28,
-        )
-        name_entry.grid(row=0, column=1, padx=(0, 16), pady=(18, 4))
+        tk.Label(
+            header, text="➕ Add 2FA Account", font=("Segoe UI", 12, "bold"),
+            bg=self.c["bg"], fg=self.c["fg"]
+        ).pack(anchor="w")
+        tk.Label(
+            header, text="Enter account details or paste an otpauth:// URI",
+            font=("Segoe UI", 9), bg=self.c["bg"], fg=self.c["fg_dim"]
+        ).pack(anchor="w", pady=(2, 0))
+
+        # Form fields
+        form = tk.Frame(dialog, bg=self.c["bg"])
+        form.pack(fill="x", padx=24)
+
+        tk.Label(
+            form, text="Account Name", font=("Segoe UI", 9, "bold"),
+            bg=self.c["bg"], fg=self.c["fg"]
+        ).pack(anchor="w", pady=(0, 2))
+        name_container, name_entry = self._create_modern_entry(form, width=36)
+        name_container.pack(fill="x", pady=(0, 10))
         name_entry.focus_set()
 
-        secret_entry = tk.Entry(
-            dialog, font=("Segoe UI", 10), bg=self.c["bg_entry"], fg=self.c["fg"],
-            relief="flat", insertbackground="white", width=28, show="*",
-        )
-        secret_entry.grid(row=1, column=1, padx=(0, 16), pady=(0, 4))
+        tk.Label(
+            form, text="Secret Key", font=("Segoe UI", 9, "bold"),
+            bg=self.c["bg"], fg=self.c["fg"]
+        ).pack(anchor="w", pady=(0, 2))
+        secret_container, secret_entry = self._create_modern_entry(form, width=36, show="*")
+        secret_container.pack(fill="x", pady=(0, 10))
 
-        # URI Integration
-        lbl_uri = tk.Label(
-            dialog, text="Or paste otpauth:// URI:", font=("Segoe UI", 9),
+        tk.Label(
+            form, text="Or paste otpauth:// URI", font=("Segoe UI", 8),
             bg=self.c["bg"], fg=self.c["fg_dim"]
-        )
-        lbl_uri.grid(row=2, column=0, columnspan=2, pady=(12, 2))
-
-        uri_entry = tk.Entry(
-            dialog, font=("Segoe UI", 9), bg=self.c["bg_entry"], fg=self.c["fg"],
-            relief="flat", insertbackground="white", width=48
-        )
-        uri_entry.grid(row=3, column=0, columnspan=2, padx=16, pady=(0, 4))
+        ).pack(anchor="w", pady=(0, 2))
+        uri_container, uri_entry = self._create_modern_entry(form, width=36)
+        uri_container.pack(fill="x", pady=(0, 16))
 
         def _on_uri_change(*args: object) -> None:
             uri = uri_entry.get().strip()
@@ -480,21 +842,21 @@ class TOTPApp:
             self._refresh_sidebar()
             dialog.destroy()
 
-        btn_frame = tk.Frame(dialog, bg=self.c["bg"])
-        btn_frame.grid(row=4, column=0, columnspan=2, pady=16)
-        tk.Button(
-            btn_frame, text="Save", font=("Segoe UI", 10, "bold"),
-            bg=self.c["blue"], fg=self.c["bg"], relief="flat", padx=20, pady=5,
-            cursor="hand2", command=_save,
-        ).pack(side="left", padx=6)
-        tk.Button(
-            btn_frame, text="Cancel", font=("Segoe UI", 10),
-            bg=self.c["surface"], fg=self.c["fg"], relief="flat", padx=12, pady=5,
-            cursor="hand2", command=dialog.destroy,
-        ).pack(side="left", padx=6)
+        # Action buttons
+        btn_box = tk.Frame(dialog, bg=self.c["bg"])
+        btn_box.pack(fill="x", padx=24, pady=(6, 20))
 
-        dialog.bind("<Return>", lambda _: _save())
-        dialog.bind("<Escape>", lambda _: dialog.destroy())
+        btn_cancel = self._create_pill_button(
+            btn_box, text="Cancel", command=dialog.destroy, padx=16, pady=5
+        )
+        btn_cancel.pack(side="right", padx=(8, 0))
+
+        btn_save = self._create_pill_button(
+            btn_box, text="Save Account", command=_save, is_primary=True, padx=20, pady=5
+        )
+        btn_save.pack(side="right")
+
+        dialog.bind("<Return>", lambda e: _save())
 
     def _open_rename_dialog(self) -> None:
         """Open a simple dialog to rename the selected account."""
@@ -531,53 +893,74 @@ class TOTPApp:
             self._selected_id = self._accounts[0].id if self._accounts else None
             self._refresh_sidebar()
 
-    # ── Copy & update loop ─────────────────────────────────────────────────────
+    # ── Copy & Update Loop ─────────────────────────────────────────────────────
 
     def _copy_code(self) -> None:
-        """Copy the current OTP code for the selected account to clipboard."""
+        """Copy current OTP code with responsive visual feedback."""
         account = self._selected_account()
         if not account:
             return
         code = get_code(account.secret)
-        if code:
-            self.copy_btn.config(text="✅  Copied!", bg=self.c["green"])
-            self.root.update_idletasks()  # Provide immediate visual feedback
-            pyperclip.copy(code)
+        if not code:
+            return
+        pyperclip.copy(code)
 
-            if self._copy_timer:
-                self.root.after_cancel(self._copy_timer)
-            self._copy_timer = self.root.after(
-                1500,
-                lambda: self.copy_btn.config(text="📋  Copy Code", bg=self.c["blue"]),
-            )
-        else:
-            messagebox.showerror(
-                "Error",
-                "Could not generate a code.\nThe secret key may be invalid.",
-            )
+        # Micro-interaction feedback
+        self.copy_btn.configure(
+            text="✓  Copied to Clipboard!",
+            bg=self.c["green"],
+        )
+        if self._copy_timer:
+            self.root.after_cancel(self._copy_timer)
+        self._copy_timer = self.root.after(1500, self._reset_copy_btn)
+
+    def _reset_copy_btn(self) -> None:
+        """Restore default copy button appearance."""
+        self.copy_btn.configure(
+            text="📋  Copy Code",
+            bg=self.c["blue"],
+        )
+        self._copy_timer = None
 
     def _update_loop(self) -> None:
-        """Refresh the OTP code and countdown timer every second."""
-        if is_config_encrypted():
-            timeout_secs = self._settings.lock_timeout_minutes * 60
-            if time.time() - self._last_activity > timeout_secs:
-                self._lock_app()
-                return
-
+        """Periodic 1-second refresh for TOTP code, progress bar, and auto-lock."""
         account = self._selected_account()
         if account:
-            code = get_code(account.secret)
-            if code:
-                self.code_var.set(code)
-                remaining = get_remaining_seconds()
-                bar_filled = remaining // 2
-                bar_empty = 15 - bar_filled
-                self.timer_var.set(f"{remaining}s  {'█' * bar_filled}{'░' * bar_empty}")
-                self.code_label.config(fg=self.c["red"] if remaining <= 5 else self.c["green"])
+            raw_code = get_code(account.secret)
+            remaining = get_remaining_seconds()
+
+            if remaining > 10:
+                color = self.c["green"]
+            elif remaining > 5:
+                color = self.c["amber"]
             else:
-                self.code_var.set("INVALID")
-                self.timer_var.set("Secret key is invalid")
-                self.code_label.config(fg=self.c["red"])
+                color = self.c["red"]
+
+            # Split code: "123  456"
+            if raw_code and len(raw_code) == 6:
+                formatted_code = f"{raw_code[:3]}  {raw_code[3:]}"
+            else:
+                formatted_code = raw_code or "------"
+
+            self.code_var.set(formatted_code)
+            self.code_label.config(fg=color)
+            self.timer_var.set(f"Refreshes in {remaining}s")
+
+            # Update progress bar
+            self._update_progress_bar(remaining, color)
+        else:
+            self.code_var.set("------")
+            self.timer_var.set("")
+            self._update_progress_bar(0, self.c["border"])
+
+        # Check auto-lock timeout
+        if (
+            is_config_encrypted()
+            and self._settings.lock_timeout_minutes > 0
+            and time.time() - self._last_activity > self._settings.lock_timeout_minutes * 60
+        ):
+            self._lock_app()
+            return
 
         self._update_job = self.root.after(1000, self._update_loop)
 
@@ -588,34 +971,63 @@ class TOTPApp:
         self.lock_frame = tk.Frame(self.root, bg=self.c["bg"])
         self.lock_frame.pack(fill="both", expand=True)
 
-        tk.Label(
-            self.lock_frame, text="🔒 App Locked", font=("Segoe UI", 16, "bold"),
-            bg=self.c["bg"], fg=self.c["fg"],
-        ).pack(pady=(50, 16))
-
-        tk.Label(
-            self.lock_frame, text="Enter Master Password:", font=("Segoe UI", 10),
-            bg=self.c["bg"], fg=self.c["fg_dim"],
-        ).pack(pady=(0, 8))
-
-        self.pwd_entry = tk.Entry(
-            self.lock_frame, font=("Segoe UI", 14), bg=self.c["bg_entry"], fg=self.c["fg"],
-            relief="flat", insertbackground="white", width=20, show="*", justify="center",
+        # Centered shield icon
+        icon_cv = tk.Canvas(
+            self.lock_frame,
+            width=52,
+            height=52,
+            bg=self.c["bg"],
+            highlightthickness=0,
         )
-        self.pwd_entry.pack(pady=8)
+        icon_cv.pack(pady=(45, 10))
+        icon_cv.create_oval(2, 2, 50, 50, fill=self.c["surface"], outline="")
+        icon_cv.create_text(26, 26, text="🔒", font=("Segoe UI", 18))
+
+        tk.Label(
+            self.lock_frame,
+            text="App Locked",
+            font=("Segoe UI", 16, "bold"),
+            bg=self.c["bg"],
+            fg=self.c["fg"],
+        ).pack(pady=(0, 4))
+
+        tk.Label(
+            self.lock_frame,
+            text="Enter Master Password to decrypt your accounts",
+            font=("Segoe UI", 9),
+            bg=self.c["bg"],
+            fg=self.c["fg_dim"],
+        ).pack(pady=(0, 14))
+
+        # Modern Password Entry
+        form_frame = tk.Frame(self.lock_frame, bg=self.c["bg"])
+        form_frame.pack()
+
+        pwd_container, self.pwd_entry = self._create_modern_entry(
+            form_frame, width=22, show="*", justify="center"
+        )
+        pwd_container.pack(pady=4)
         self.pwd_entry.focus_set()
 
         self.lbl_pwd_error = tk.Label(
-            self.lock_frame, text="", font=("Segoe UI", 9), bg=self.c["bg"], fg=self.c["red"]
+            self.lock_frame,
+            text="",
+            font=("Segoe UI", 9),
+            bg=self.c["bg"],
+            fg=self.c["red"],
         )
-        self.lbl_pwd_error.pack()
+        self.lbl_pwd_error.pack(pady=(2, 0))
 
-        btn = tk.Button(
-            self.lock_frame, text="Unlock", font=("Segoe UI", 11, "bold"),
-            bg=self.c["blue"], fg=self.c["bg"], relief="flat", padx=24, pady=6,
-            cursor="hand2", command=self._try_unlock,
+        btn_unlock = self._create_pill_button(
+            self.lock_frame,
+            text="Unlock",
+            command=self._try_unlock,
+            is_primary=True,
+            font=("Segoe UI", 10, "bold"),
+            padx=28,
+            pady=6,
         )
-        btn.pack(pady=(16, 8))
+        btn_unlock.pack(pady=(12, 10))
 
         btn_reset = tk.Button(
             self.lock_frame,
@@ -648,7 +1060,7 @@ class TOTPApp:
         """Open a confirmation modal to reset vault and master password."""
         dialog = tk.Toplevel(self.root)
         dialog.title("Reset Vault Confirmation")
-        dialog.geometry("420x290")
+        dialog.geometry("420x300")
         dialog.configure(bg=self.c["bg"])
         dialog.resizable(False, False)
         dialog.grab_set()
@@ -684,11 +1096,14 @@ class TOTPApp:
             bg=self.c["bg_entry"],
             fg=self.c["fg"],
             relief="flat",
-            insertbackground="white",
+            insertbackground=self.c["fg"],
             width=14,
             justify="center",
+            highlightthickness=1,
+            highlightbackground=self.c["border"],
+            highlightcolor=self.c["border_focus"],
         )
-        confirm_entry.pack(pady=4)
+        confirm_entry.pack(pady=4, ipady=4)
         confirm_entry.focus_set()
 
         lbl_error = tk.Label(
@@ -721,83 +1136,97 @@ class TOTPApp:
             self.root.unbind("<Return>")
             self._init_main_app(None)
 
-        btn_cancel = tk.Button(
-            btn_box,
-            text="Cancel",
-            font=("Segoe UI", 9),
-            bg=self.c["surface"],
-            fg=self.c["fg"],
-            relief="flat",
-            padx=14,
-            pady=4,
-            cursor="hand2",
-            command=dialog.destroy,
+        btn_cancel = self._create_pill_button(
+            btn_box, text="Cancel", command=dialog.destroy, padx=14, pady=5
         )
         btn_cancel.pack(side="left", padx=8)
 
-        btn_confirm = tk.Button(
-            btn_box,
-            text="Reset Vault",
-            font=("Segoe UI", 9, "bold"),
-            bg=self.c["red"],
-            fg=self.c["bg"],
-            relief="flat",
-            padx=14,
-            pady=4,
-            cursor="hand2",
-            command=_do_reset,
+        btn_confirm = self._create_pill_button(
+            btn_box, text="Reset Vault", command=_do_reset, is_danger=True, padx=14, pady=5
         )
         btn_confirm.pack(side="left", padx=8)
 
         confirm_entry.bind("<Return>", lambda e: _do_reset())
 
     def _open_security_dialog(self) -> None:
+        """Open the modernized Security Settings dialog."""
         dialog = tk.Toplevel(self.root)
         dialog.title("Security Settings")
-        dialog.geometry("380x380")
+        dialog.geometry("420x460")
         dialog.configure(bg=self.c["bg"])
         dialog.resizable(False, False)
         dialog.grab_set()
         dialog.attributes("-topmost", True)
 
-        is_enc = is_config_encrypted()
-        status_text = "Status: Locked 🔒" if is_enc else "Status: Unlocked 🔓"
+        header = tk.Frame(dialog, bg=self.c["bg"])
+        header.pack(fill="x", padx=24, pady=(20, 12))
+
         tk.Label(
-            dialog, text=status_text, font=("Segoe UI", 11, "bold"),
-            bg=self.c["bg"], fg=self.c["fg"]
-        ).pack(pady=16)
+            header,
+            text="⚙️ Security & Vault Settings",
+            font=("Segoe UI", 12, "bold"),
+            bg=self.c["bg"],
+            fg=self.c["fg"],
+        ).pack(anchor="w")
+
+        # Status badge card
+        is_enc = is_config_encrypted()
+        status_bg = self.c["bg_card"]
+        status_card = tk.Frame(
+            dialog,
+            bg=status_bg,
+            padx=16,
+            pady=12,
+            highlightbackground=self.c["border"],
+            highlightthickness=1,
+        )
+        status_card.pack(fill="x", padx=24, pady=(0, 14))
+
+        status_icon = "🔒" if is_enc else "🔓"
+        status_title = (
+            "Vault Protected with Master Password"
+            if is_enc
+            else "No Master Password (Unencrypted)"
+        )
+        status_color = self.c["green"] if is_enc else self.c["amber"]
+
+        tk.Label(
+            status_card,
+            text=f"{status_icon}  {status_title}",
+            font=("Segoe UI", 9, "bold"),
+            bg=status_bg,
+            fg=status_color,
+        ).pack(anchor="w")
+
+        form = tk.Frame(dialog, bg=self.c["bg"])
+        form.pack(fill="x", padx=24)
 
         # Timeout setting
-        frame_time = tk.Frame(dialog, bg=self.c["bg"])
-        frame_time.pack(pady=10)
         tk.Label(
-            frame_time, text="Auto-lock timeout (minutes):", font=("Segoe UI", 9),
-            bg=self.c["bg"], fg=self.c["fg"]
-        ).pack(side="left", padx=8)
-
+            form,
+            text="Auto-Lock Timeout (minutes)",
+            font=("Segoe UI", 9, "bold"),
+            bg=self.c["bg"],
+            fg=self.c["fg"],
+        ).pack(anchor="w", pady=(0, 2))
         timeout_var = tk.StringVar(value=str(self._settings.lock_timeout_minutes))
-        tk.Entry(
-            frame_time, textvariable=timeout_var, width=5, justify="center",
-            bg=self.c["bg_entry"], fg=self.c["fg"], relief="flat", insertbackground="white"
-        ).pack(side="left")
+        timeout_cnt, timeout_entry = self._create_modern_entry(
+            form, width=8, justify="center"
+        )
+        timeout_entry.config(textvariable=timeout_var)
+        timeout_cnt.pack(anchor="w", pady=(0, 10))
 
         # Password setting
-        frame_pwd = tk.Frame(dialog, bg=self.c["bg"])
-        frame_pwd.pack(pady=10, fill="x", padx=20)
-
+        pwd_label_text = "Change Master Password" if is_enc else "Set Master Password"
         tk.Label(
-            frame_pwd, text="New Password:", font=("Segoe UI", 9),
-            bg=self.c["bg"], fg=self.c["fg"], anchor="w"
-        ).pack(fill="x")
-        pwd_entry = tk.Entry(
-            frame_pwd,
-            show="*",
-            bg=self.c["bg_entry"],
+            form,
+            text=pwd_label_text,
+            font=("Segoe UI", 9, "bold"),
+            bg=self.c["bg"],
             fg=self.c["fg"],
-            relief="flat",
-            insertbackground="white"
-        )
-        pwd_entry.pack(fill="x", pady=(4, 10))
+        ).pack(anchor="w", pady=(0, 2))
+        pwd_cnt, pwd_entry = self._create_modern_entry(form, width=34, show="*")
+        pwd_cnt.pack(fill="x", pady=(0, 12))
 
         def _save() -> None:
             try:
@@ -825,41 +1254,46 @@ class TOTPApp:
                     messagebox.showinfo("Success", "Password protection removed.", parent=dialog)
                 dialog.destroy()
 
-        tk.Button(
-            dialog,
-            text="Save Settings",
-            font=("Segoe UI", 10, "bold"),
-            bg=self.c["blue"],
-            fg=self.c["bg"],
-            relief="flat",
-            cursor="hand2",
-            command=_save,
-        ).pack(pady=10)
+        btn_box = tk.Frame(dialog, bg=self.c["bg"])
+        btn_box.pack(fill="x", padx=24, pady=(0, 14))
+
+        btn_save = self._create_pill_button(
+            btn_box, text="Save Settings", command=_save, is_primary=True, padx=18, pady=5
+        )
+        btn_save.pack(side="left", padx=(0, 8))
 
         if is_enc:
-            tk.Button(
-                dialog,
-                text="Remove Password",
-                font=("Segoe UI", 9),
-                bg=self.c["red"],
-                fg=self.c["bg"],
-                relief="flat",
-                cursor="hand2",
-                command=_remove,
-            ).pack(pady=5)
+            btn_remove = self._create_pill_button(
+                btn_box, text="Remove Password", command=_remove, is_danger=True, padx=14, pady=5
+            )
+            btn_remove.pack(side="left")
+
+        # Divider
+        tk.Frame(dialog, height=1, bg=self.c["border"]).pack(fill="x", padx=24, pady=8)
+
+        # Backup & restore card
+        tk.Label(
+            dialog,
+            text="Data Backup & Recovery",
+            font=("Segoe UI", 9, "bold"),
+            bg=self.c["bg"],
+            fg=self.c["fg"],
+        ).pack(anchor="w", padx=24, pady=(4, 6))
 
         def _export_backup() -> None:
             path = filedialog.asksaveasfilename(
                 title="Export Encrypted Backup",
                 defaultextension=".totp_backup",
                 filetypes=[("TOTP Backup Files", "*.totp_backup")],
-                parent=dialog
+                parent=dialog,
             )
             if not path:
                 return
             pwd = simpledialog.askstring(
-                "Backup Password", "Create a password to encrypt this backup:",
-                show="*", parent=dialog
+                "Backup Password",
+                "Create a password to encrypt this backup:",
+                show="*",
+                parent=dialog,
             )
             if not pwd:
                 return
@@ -876,13 +1310,15 @@ class TOTPApp:
                 title="Restore from Backup",
                 defaultextension=".totp_backup",
                 filetypes=[("TOTP Backup Files", "*.totp_backup")],
-                parent=dialog
+                parent=dialog,
             )
             if not path:
                 return
             pwd = simpledialog.askstring(
-                "Backup Password", "Enter the password for this backup:",
-                show="*", parent=dialog
+                "Backup Password",
+                "Enter the password for this backup:",
+                show="*",
+                parent=dialog,
             )
             if not pwd:
                 return
@@ -890,7 +1326,9 @@ class TOTPApp:
                 added = restore_backup(pwd, path, self._current_key)
                 self._accounts = load_accounts(self._current_key)
                 self._refresh_sidebar()
-                messagebox.showinfo("Success", f"Restored {added} new account(s).", parent=dialog)
+                messagebox.showinfo(
+                    "Success", f"Restored {added} new account(s).", parent=dialog
+                )
             except InvalidPasswordError:
                 messagebox.showerror(
                     "Import Failed", "Incorrect password or corrupted backup.", parent=dialog
@@ -898,60 +1336,86 @@ class TOTPApp:
             except Exception as e:
                 messagebox.showerror("Import Failed", str(e), parent=dialog)
 
-        tk.Frame(dialog, height=1, bg=self.c["fg_dim"]).pack(fill="x", padx=30, pady=10)
+        backup_box = tk.Frame(dialog, bg=self.c["bg"])
+        backup_box.pack(fill="x", padx=24)
 
-        lbl_backup = tk.Label(
-            dialog, text="Data Backup & Restore:", font=("Segoe UI", 9, "bold"),
-            bg=self.c["bg"], fg=self.c["fg"]
+        btn_export = self._create_pill_button(
+            backup_box, text="📦 Export Backup", command=_export_backup, padx=14, pady=5
         )
-        lbl_backup.pack(pady=(0, 5))
+        btn_export.pack(side="left", padx=(0, 8))
 
-        backup_frame = tk.Frame(dialog, bg=self.c["bg"])
-        backup_frame.pack(pady=5)
-        tk.Button(
-            backup_frame, text="Export Backup", font=("Segoe UI", 9),
-            bg=self.c["surface"], fg=self.c["fg"], relief="flat",
-            cursor="hand2", command=_export_backup
-        ).pack(side="left", padx=5)
-
-        tk.Button(
-            backup_frame, text="Import Backup", font=("Segoe UI", 9),
-            bg=self.c["surface"], fg=self.c["fg"], relief="flat",
-            cursor="hand2", command=_import_backup
-        ).pack(side="left", padx=5)
+        btn_import = self._create_pill_button(
+            backup_box, text="📥 Import Backup", command=_import_backup, padx=14, pady=5
+        )
+        btn_import.pack(side="left")
 
     def _open_sync_dialog(self) -> None:
+        """Open the modernized Cloud Sync dialog."""
         dialog = tk.Toplevel(self.root)
         dialog.title("Cloud Sync")
-        dialog.geometry("380x450")
+        dialog.geometry("420x440")
         dialog.configure(bg=self.c["bg"])
         dialog.resizable(False, False)
         dialog.grab_set()
         dialog.attributes("-topmost", True)
 
+        header = tk.Frame(dialog, bg=self.c["bg"])
+        header.pack(fill="x", padx=24, pady=(20, 14))
+
+        tk.Label(
+            header,
+            text="☁️ Cloud Synchronization",
+            font=("Segoe UI", 12, "bold"),
+            bg=self.c["bg"],
+            fg=self.c["fg"],
+        ).pack(anchor="w")
+        tk.Label(
+            header,
+            text="End-to-End Encrypted backup and sync across devices",
+            font=("Segoe UI", 9),
+            bg=self.c["bg"],
+            fg=self.c["fg_dim"],
+        ).pack(anchor="w", pady=(2, 0))
+
+        body = tk.Frame(dialog, bg=self.c["bg"])
+        body.pack(fill="both", expand=True, padx=24)
+
         def _refresh_ui() -> None:
-            for w in dialog.winfo_children():
+            for w in body.winfo_children():
                 w.destroy()
 
-            tk.Label(
-                dialog, text="Cloud Sync (E2EE) ☁️", font=("Segoe UI", 12, "bold"),
-                bg=self.c["bg"], fg=self.c["fg"], pady=10
-            ).pack()
-
             if self._settings.sync_token:
-                # Logged in UI
+                # Connected status card
+                status_card = tk.Frame(
+                    body,
+                    bg=self.c["bg_card"],
+                    padx=16,
+                    pady=16,
+                    highlightbackground=self.c["border"],
+                    highlightthickness=1,
+                )
+                status_card.pack(fill="x", pady=10)
+
                 tk.Label(
-                    dialog,
-                    text="Status: Connected to Server",
-                    bg=self.c["bg"],
+                    status_card,
+                    text="● Connected to Sync Server",
+                    font=("Segoe UI", 10, "bold"),
+                    bg=self.c["bg_card"],
                     fg=self.c["green"],
-                    font=("Segoe UI", 10),
-                ).pack(pady=5)
+                ).pack(anchor="w")
+
+                tk.Label(
+                    status_card,
+                    text=f"Server: {self._settings.sync_server_url}",
+                    font=("Segoe UI", 8),
+                    bg=self.c["bg_card"],
+                    fg=self.c["fg_dim"],
+                ).pack(anchor="w", pady=(4, 0))
 
                 def _do_sync(action: str) -> None:
                     pwd = simpledialog.askstring(
-                        "E2EE Password",
-                        f"Enter E2EE/Sync Password to {action} data:",
+                        "Vault Password",
+                        "Enter Master/Sync password to encrypt/decrypt cloud vault:",
                         show="*",
                         parent=dialog,
                     )
@@ -960,86 +1424,104 @@ class TOTPApp:
 
                     manager = SyncManager(self._settings, pwd)
                     try:
-                        if action == "Push":
-                            manager.push()
+                        if action == "push":
+                            manager.push(self._current_key)
                             messagebox.showinfo(
-                                "Success", "Data securely pushed to cloud.", parent=dialog
+                                "Success", "Vault uploaded successfully!", parent=dialog
                             )
-                        else:
-                            manager.pull_and_merge()
+                        elif action == "pull":
+                            count = manager.pull(self._current_key)
                             self._accounts = load_accounts(self._current_key)
                             self._refresh_sidebar()
                             messagebox.showinfo(
                                 "Success",
-                                "Data pulled and merged to local device.",
+                                f"Vault synchronized! Added {count} new accounts.",
                                 parent=dialog,
                             )
-                    except (AuthenticationError, ConflictError, SyncClientError) as e:
-                        messagebox.showerror("Sync Error", str(e), parent=dialog)
+                    except ConflictError:
+                        msg = (
+                            "Cloud vault was modified by another device.\n"
+                            "Do you want to force overwrite cloud data?"
+                        )
+                        if messagebox.askyesno("Conflict Detected", msg, parent=dialog):
+                            try:
+                                manager.resolve_conflict_overwrite(self._current_key)
+                                messagebox.showinfo(
+                                    "Success", "Vault overwritten successfully!", parent=dialog
+                                )
+                            except Exception as e:
+                                messagebox.showerror("Error", str(e), parent=dialog)
                     except Exception as e:
-                        messagebox.showerror("Error", f"Failed: {e}", parent=dialog)
+                        messagebox.showerror("Sync Failed", str(e), parent=dialog)
 
-                tk.Button(
-                    dialog,
-                    text="Pull down from Cloud (Merge)",
-                    bg=self.c["surface"],
-                    fg=self.c["fg"],
-                    cursor="hand2",
-                    command=lambda: _do_sync("Pull"),
-                ).pack(pady=10, fill="x", padx=40)
-                tk.Button(
-                    dialog,
-                    text="Push up to Cloud",
-                    bg=self.c["surface"],
-                    fg=self.c["fg"],
-                    cursor="hand2",
-                    command=lambda: _do_sync("Push"),
-                ).pack(pady=10, fill="x", padx=40)
+                actions_frame = tk.Frame(body, bg=self.c["bg"])
+                actions_frame.pack(fill="x", pady=16)
+
+                btn_push = self._create_pill_button(
+                    actions_frame,
+                    text="⬆️  Push to Cloud",
+                    command=lambda: _do_sync("push"),
+                    is_primary=True,
+                    padx=14,
+                    pady=6,
+                )
+                btn_push.pack(side="left", padx=(0, 8))
+
+                btn_pull = self._create_pill_button(
+                    actions_frame,
+                    text="⬇️  Pull from Cloud",
+                    command=lambda: _do_sync("pull"),
+                    padx=14,
+                    pady=6,
+                )
+                btn_pull.pack(side="left")
 
                 def _logout() -> None:
                     self._settings.sync_token = ""
                     save_settings(self._settings)
                     _refresh_ui()
 
-                tk.Button(
-                    dialog,
-                    text="Logout",
-                    bg=self.c["red"],
-                    fg=self.c["bg"],
-                    cursor="hand2",
+                btn_logout = self._create_pill_button(
+                    body,
+                    text="Logout from Cloud",
                     command=_logout,
-                ).pack(pady=30)
-
+                    is_danger=True,
+                    padx=14,
+                    pady=5,
+                )
+                btn_logout.pack(pady=20)
             else:
-                # Login UI
+                # Login / Register Form
                 tk.Label(
-                    dialog, text="Server URL:", bg=self.c["bg"], fg=self.c["fg"]
-                ).pack(anchor="w", padx=40)
-                url_entry = tk.Entry(
-                    dialog, bg=self.c["bg_entry"], fg=self.c["fg"], insertbackground="white"
-                )
-                url_entry.insert(0, self._settings.sync_server_url)
-                url_entry.pack(fill="x", padx=40, pady=2)
-
-                tk.Label(
-                    dialog, text="Username:", bg=self.c["bg"], fg=self.c["fg"]
-                ).pack(anchor="w", padx=40, pady=(15, 0))
-                user_entry = tk.Entry(
-                    dialog, bg=self.c["bg_entry"], fg=self.c["fg"], insertbackground="white"
-                )
-                user_entry.pack(fill="x", padx=40, pady=2)
-
-                tk.Label(
-                    dialog, text="Password:", bg=self.c["bg"], fg=self.c["fg"]
-                ).pack(anchor="w", padx=40, pady=(10, 0))
-                pwd_entry = tk.Entry(
-                    dialog,
-                    show="*",
-                    bg=self.c["bg_entry"],
+                    body,
+                    text="Server URL",
+                    font=("Segoe UI", 9, "bold"),
+                    bg=self.c["bg"],
                     fg=self.c["fg"],
-                    insertbackground="white",
-                )
-                pwd_entry.pack(fill="x", padx=40, pady=2)
+                ).pack(anchor="w", pady=(0, 2))
+                url_cnt, url_entry = self._create_modern_entry(body, width=34)
+                url_entry.insert(0, self._settings.sync_server_url)
+                url_cnt.pack(fill="x", pady=(0, 10))
+
+                tk.Label(
+                    body,
+                    text="Username",
+                    font=("Segoe UI", 9, "bold"),
+                    bg=self.c["bg"],
+                    fg=self.c["fg"],
+                ).pack(anchor="w", pady=(0, 2))
+                user_cnt, user_entry = self._create_modern_entry(body, width=34)
+                user_cnt.pack(fill="x", pady=(0, 10))
+
+                tk.Label(
+                    body,
+                    text="Password",
+                    font=("Segoe UI", 9, "bold"),
+                    bg=self.c["bg"],
+                    fg=self.c["fg"],
+                ).pack(anchor="w", pady=(0, 2))
+                pwd_cnt, pwd_entry = self._create_modern_entry(body, width=34, show="*")
+                pwd_cnt.pack(fill="x", pady=(0, 16))
 
                 def _auth(is_register: bool) -> None:
                     self._settings.sync_server_url = url_entry.get().strip()
@@ -1053,7 +1535,6 @@ class TOTPApp:
 
                     manager = SyncManager(self._settings, p)
                     try:
-                        # For login API we only need any string as sync_password
                         if is_register:
                             manager.client.register(u, p)
                             messagebox.showinfo(
@@ -1067,23 +1548,26 @@ class TOTPApp:
                     except Exception as e:
                         messagebox.showerror("Error", str(e), parent=dialog)
 
-                tk.Button(
-                    dialog,
+                btn_box = tk.Frame(body, bg=self.c["bg"])
+                btn_box.pack(fill="x", pady=6)
+
+                btn_login = self._create_pill_button(
+                    btn_box,
                     text="Login",
-                    bg=self.c["blue"],
-                    fg=self.c["bg"],
-                    font=("Segoe UI", 10, "bold"),
-                    cursor="hand2",
                     command=lambda: _auth(False),
-                ).pack(pady=20)
-                tk.Button(
-                    dialog,
-                    text="Register new Account",
-                    bg=self.c["surface"],
-                    fg=self.c["fg"],
-                    cursor="hand2",
+                    is_primary=True,
+                    padx=22,
+                    pady=6,
+                )
+                btn_login.pack(side="left", padx=(0, 8))
+
+                btn_reg = self._create_pill_button(
+                    btn_box,
+                    text="Register New Account",
                     command=lambda: _auth(True),
-                ).pack()
+                    padx=14,
+                    pady=6,
+                )
+                btn_reg.pack(side="left")
 
         _refresh_ui()
-
