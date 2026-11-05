@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/account_provider.dart';
+import '../providers/security_provider.dart';
 import '../providers/sync_provider.dart';
 import '../widgets/sync_password_dialog.dart';
 
@@ -207,6 +208,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final syncProvider = context.watch<SyncProvider>();
+    final securityProvider = context.watch<SecurityProvider>();
 
     return Scaffold(
       appBar: AppBar(
@@ -220,7 +222,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 20),
 
-          // Section 2: App & Security Info
+          // Section 2: App Security & Biometrics
+          _buildSecurityCard(context, theme, securityProvider),
+
+          const SizedBox(height: 20),
+
+          // Section 3: App & Security Info
           _buildInfoCard(context, theme),
         ],
       ),
@@ -600,6 +607,131 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSecurityCard(BuildContext context, ThemeData theme, SecurityProvider security) {
+    final isSupported = security.isDeviceSupported;
+    final isEnabled = security.isBiometricEnabled;
+    final biometricName = security.biometricDisplayName;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.fingerprint, color: theme.colorScheme.primary, size: 20),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Bảo mật ứng dụng',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Biometric Toggle Switch
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                'Khóa bằng $biometricName',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                !isSupported
+                    ? 'Thiết bị không hỗ trợ hoặc chưa đăng ký sinh trắc học'
+                    : isEnabled
+                        ? 'Yêu cầu xác thực mỗi khi mở ứng dụng'
+                        : 'Bảo vệ mã 2FA khỏi người lạ',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              value: isEnabled,
+              onChanged: !isSupported
+                  ? null
+                  : (val) async {
+                      final success = await security.toggleBiometric(val);
+                      if (!success && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Xác thực thất bại. Không thể thay đổi cài đặt.'),
+                            backgroundColor: theme.colorScheme.error,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    },
+            ),
+
+            if (isEnabled) ...[
+              const Divider(height: 24),
+
+              // Auto-Lock Timeout Dropdown
+              Row(
+                children: [
+                  Icon(Icons.timer_outlined, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Tự động khóa sau',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                    ),
+                  ),
+                  const Spacer(),
+                  DropdownButton<int>(
+                    value: security.autoLockSeconds,
+                    underline: const SizedBox(),
+                    borderRadius: BorderRadius.circular(12),
+                    items: const [
+                      DropdownMenuItem(value: 0, child: Text('Ngay lập tức', style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 30, child: Text('30 giây', style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 60, child: Text('1 phút', style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 300, child: Text('5 phút', style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 900, child: Text('15 phút', style: TextStyle(fontSize: 13))),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        security.setAutoLockSeconds(val);
+                      }
+                    },
+                  ),
+                ],
+              ),
+
+              const Divider(height: 24),
+
+              // Lock Now Button
+              OutlinedButton.icon(
+                onPressed: () {
+                  security.lock();
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                },
+                icon: const Icon(Icons.lock_outline, size: 18),
+                label: const Text('Khóa ứng dụng ngay (Lock Now)'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
