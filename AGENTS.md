@@ -86,9 +86,11 @@ Whenever modifying or generating code, AI agents **MUST** strictly adhere to the
    * Never log Base32 secrets, raw passwords, or authorization tokens in console outputs, logging handlers, or UI dialogs.
 6. **Continuous Atomic Commits**:
    * During plan implementation, commit logical units and incremental milestones immediately once verified (tests pass & lint clean). **Never** delay committing until the very end to batch everything into a single mega-commit. Commit early, commit often, and keep commits atomic.
-7. **Branch Isolation (Branch off `main`)**:
-   * Whenever implementing a new feature or fixing an issue, **NEVER** develop or commit directly on the `main` branch.
+7. **Branch Isolation & PR Workflow (No Local Merges to `main`)**:
+   * Whenever implementing a new feature or fixing an issue, **NEVER** develop, commit, or merge directly into `main` locally.
    * Always branch off from `main` by creating and checking out a dedicated feature or fix branch (`git checkout -b feat/<name>` or `git checkout -b fix/<name>`).
+   * When work is completed and verified, push the branch to remote (`git push -u origin <branch>`) and create a **Pull Request** on GitHub (using `gh pr create` or web UI).
+   * Merging into `main` is strictly performed **on GitHub via Pull Request**, never via local `git merge`.
 
 ---
 
@@ -143,7 +145,7 @@ Specialized Agent Skills are stored in [`.agents/skills/`](file:///d:/Personal%2
 
 ## 5. 🛠️ Development Workflows & Cheatsheet
 
-### 🌿 Git & Branching Strategy
+### 🌿 Git & Pull Request Strategy
 Whenever starting a new feature or bug fix:
 1. Ensure your local `main` is up-to-date:
    ```powershell
@@ -157,14 +159,27 @@ Whenever starting a new feature or bug fix:
    git checkout -b fix/<bug-name>        # For bug fixes
    ```
 3. Commit logical units atomically on that branch during execution.
+4. Push the branch to remote and create a Pull Request on GitHub:
+   ```powershell
+   git push -u origin feat/<feature-name>
+   gh pr create --title "feat: <title>" --body "<description>"
+   ```
+5. **NEVER** run `git merge` into `main` locally. Merging must be reviewed and executed directly on GitHub via PR.
+6. Once the PR is merged on GitHub, update your local `main`:
+   ```powershell
+   git checkout main
+   git pull origin main
+   git branch -d feat/<feature-name>
+   ```
 
 ### 📋 Feature Planning & Execution Lifecycle
 When building major features or multi-step changes:
 1. **Brainstorm & Spec**: Use `brainstorming` to explore intent, edge cases, and architectural options.
 2. **Branch Off `main`**: Create and switch to a dedicated feature branch (`feat/<name>`).
 3. **Write Implementation Plan**: Use `writing-plans` to produce a detailed task breakdown with file paths, code snippets, TDD test steps, and commit gates.
-4. **Execute Incrementally**: Use `executing-plans` to execute tasks inline with continuous test validation, ruling logs, and atomic `git commit` after each verified milestone.
+4. **Execute Incrementally**: Use `executing-plans` to execute tasks inline with continuous test validation, ruling logs, and atomic `git commit` on the branch.
 5. **Review & Audit**: Run `code-review` to inspect diffs against both project standards and original requirements.
+6. **Push & Create Pull Request**: Push branch to GitHub (`git push -u origin <branch>`) and create a PR (`gh pr create`) for review and merging on GitHub.
 
 ### 🖥️ Desktop Application (`apps/ui`)
 * **Environment Setup**:
@@ -243,7 +258,7 @@ git push origin vX.Y.Z
 
 Before completing any user request or committing changes:
 
-1. **Branch Isolation**: Ensure feature/fix work is conducted on a dedicated branch checked out from `main` (`feat/*` or `fix/*`), never directly on `main`.
+1. **Branch & PR Isolation**: Ensure feature/fix work is conducted on a dedicated branch checked out from `main` (`feat/*` or `fix/*`), and merged strictly via a GitHub Pull Request. Never merge branches directly into `main` locally.
 2. **Linting Verification**: Ensure `ruff check` (for Python) or `flutter analyze` (for Flutter) returns zero errors or warnings.
 3. **Test Validation**: Run the relevant `pytest` or `flutter test` command to guarantee all existing and newly authored tests pass.
 4. **No Secret Leaks**: Verify that no real secret keys, private credentials, or auth tokens have been added to files or Git history.
