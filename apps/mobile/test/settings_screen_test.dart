@@ -140,7 +140,7 @@ void main() {
 
       expect(find.text('Bảo mật ứng dụng'), findsOneWidget);
       expect(find.text('Thông tin ứng dụng'), findsOneWidget);
-      expect(find.text('v0.6.3'), findsOneWidget);
+      expect(find.text('v0.7.0'), findsOneWidget);
 
       syncProvider.dispose();
     });

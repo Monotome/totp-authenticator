@@ -72,8 +72,8 @@ Items are loosely prioritized within each milestone.
 - [x] Flutter-based companion app (single codebase for Android + iOS)
 - [x] QR code scanner to add accounts on mobile
 - [x] Live OTP display with countdown timer (mirrors desktop experience)
-- [ ] Sync with desktop via v0.6 cloud sync backend
-- [ ] Biometric lock (fingerprint / Face ID)
+- [x] Sync with desktop via v0.6 cloud sync backend
+- [x] Biometric lock (fingerprint / Face ID)
 
 ---
 
