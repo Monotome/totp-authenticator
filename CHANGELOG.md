@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- **Mobile Biometric Infinite Unlock Loop (`apps/mobile`)**: Fixed an issue on Android where activating biometric protection or unlocking on the Lock Screen triggered an endless authentication loop:
+  - Ignored `AppLifecycleState.inactive` and spurious pause events caused by the native `BiometricPrompt` system dialog overlay.
+  - Added an active `_isAuthenticating` guard preventing lifecycle changes from marking the app as paused/backgrounded while biometric authentication is ongoing.
+  - Added a post-unlock grace period ignoring immediate resume events after successful fingerprint verification.
+  - Maintained a stable root `Stack` widget tree in `AuthGate`, preventing `LockScreen` from unnecessarily unmounting and re-triggering auto-prompt upon app resume.
 
 ## [v0.8.0] - 2026-11-05
 ### Changed

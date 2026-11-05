@@ -16,6 +16,7 @@ class SecurityProvider extends ChangeNotifier with WidgetsBindingObserver {
   List<BiometricType> _availableBiometrics = [];
   int _autoLockSeconds = 0; // 0 = Immediately
   DateTime? _lastPausedAt;
+  DateTime? _lastUnlockedAt;
   bool _isAuthenticating = false;
   bool _isInitialized = false;
 
@@ -67,24 +68,37 @@ class SecurityProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<bool> toggleBiometric(bool enable) async {
     if (enable == _isBiometricEnabled) return true;
 
-    final reason = enable
-        ? 'Xác thực để bật bảo vệ sinh trắc học'
-        : 'Xác thực để tắt bảo vệ sinh trắc học';
-
-    final authenticated = await _biometricService.authenticate(localizedReason: reason);
-    if (!authenticated) {
-      return false;
-    }
-
-    _isBiometricEnabled = enable;
-    if (!enable) {
-      _isLocked = false;
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_prefBiometricEnabled, enable);
+    if (_isAuthenticating) return false;
+    _isAuthenticating = true;
     notifyListeners();
-    return true;
+
+    try {
+      final reason = enable
+          ? 'Xác thực để bật bảo vệ sinh trắc học'
+          : 'Xác thực để tắt bảo vệ sinh trắc học';
+
+      final authenticated = await _biometricService.authenticate(localizedReason: reason);
+      if (!authenticated) {
+        return false;
+      }
+
+      _isBiometricEnabled = enable;
+      if (!enable) {
+        _isLocked = false;
+      } else {
+        // User confirmed biometrics; keep app unlocked in current session
+        _isLocked = false;
+        _lastPausedAt = null;
+        _lastUnlockedAt = DateTime.now();
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefBiometricEnabled, enable);
+      return true;
+    } finally {
+      _isAuthenticating = false;
+      notifyListeners();
+    }
   }
 
   /// Updates the auto-lock delay duration in seconds.
@@ -99,6 +113,8 @@ class SecurityProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<bool> authenticateAndUnlock() async {
     if (!_isBiometricEnabled || !_isLocked) {
       _isLocked = false;
+      _lastPausedAt = null;
+      _lastUnlockedAt = DateTime.now();
       notifyListeners();
       return true;
     }
@@ -115,6 +131,8 @@ class SecurityProvider extends ChangeNotifier with WidgetsBindingObserver {
 
       if (success) {
         _isLocked = false;
+        _lastPausedAt = null;
+        _lastUnlockedAt = DateTime.now();
       }
       return success;
     } finally {
@@ -134,6 +152,7 @@ class SecurityProvider extends ChangeNotifier with WidgetsBindingObserver {
   /// Direct unlock without biometric check (useful for tests or internal gates).
   void unlockDirectly() {
     _isLocked = false;
+    _lastPausedAt = null;
     notifyListeners();
   }
 
@@ -141,9 +160,20 @@ class SecurityProvider extends ChangeNotifier with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!_isBiometricEnabled) return;
 
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.hidden) {
+    // Ignore lifecycle transitions caused by system BiometricPrompt dialog
+    if (_isAuthenticating) {
+      _lastPausedAt = null;
+      return;
+    }
+
+    // Only paused or hidden represent the user leaving the app into the background.
+    // Inactive is ignored as it is triggered by system dialogs, notification drawer, or keyboard popups.
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      // Ignore spurious pause events during the immediate dismissal of the auth dialog
+      if (_lastUnlockedAt != null &&
+          DateTime.now().difference(_lastUnlockedAt!).inMilliseconds < 1000) {
+        return;
+      }
       _lastPausedAt ??= DateTime.now();
     } else if (state == AppLifecycleState.resumed) {
       if (_lastPausedAt != null && !_isLocked) {

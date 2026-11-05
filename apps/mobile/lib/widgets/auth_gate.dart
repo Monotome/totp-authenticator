@@ -30,9 +30,11 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.hidden) {
+    // If biometric prompt is showing, do not treat temporary loss of focus as going into background
+    final security = context.read<SecurityProvider>();
+    if (security.isAuthenticating) return;
+
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
       if (!_isInBackground) {
         setState(() {
           _isInBackground = true;
@@ -63,15 +65,19 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
     }
 
     final Widget activeScreen = (security.isBiometricEnabled && security.isLocked)
-        ? const LockScreen()
-        : const HomeScreen();
+        ? const LockScreen(key: ValueKey('lock_screen'))
+        : const HomeScreen(key: ValueKey('home_screen'));
 
     // Multitasking Privacy Shield:
-    // If the app is in the background and biometrics is enabled, obscure sensitive TOTP codes
-    if (_isInBackground && security.isBiometricEnabled) {
-      return Stack(
-        children: [
-          activeScreen,
+    // Only display privacy blur when real backgrounding occurred and not authenticating
+    final bool showPrivacyShield = _isInBackground &&
+        security.isBiometricEnabled &&
+        !security.isAuthenticating;
+
+    return Stack(
+      children: [
+        activeScreen,
+        if (showPrivacyShield)
           Positioned.fill(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
@@ -93,10 +99,7 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
               ),
             ),
           ),
-        ],
-      );
-    }
-
-    return activeScreen;
+      ],
+    );
   }
 }

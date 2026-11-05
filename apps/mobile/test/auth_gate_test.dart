@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:totp_authenticator/providers/account_provider.dart';
 import 'package:totp_authenticator/providers/security_provider.dart';
 import 'package:totp_authenticator/providers/sync_provider.dart';
+import 'package:totp_authenticator/screens/home_screen.dart';
 import 'package:totp_authenticator/screens/lock_screen.dart';
 import 'package:totp_authenticator/services/biometric_service.dart';
 import 'package:totp_authenticator/widgets/auth_gate.dart';
@@ -97,6 +98,44 @@ void main() {
 
       expect(find.byType(LockScreen), findsOneWidget);
       expect(find.text('Ứng dụng đã bị khóa'), findsOneWidget);
+    });
+
+    testWidgets('transitions to HomeScreen after unlock without infinite loop', (tester) async {
+      SharedPreferences.setMockInitialValues({'security_biometric_enabled': true});
+      final mockBiometric = MockBiometricService()..mockAuthenticateResult = false;
+
+      securityProvider = SecurityProvider(
+        biometricService: mockBiometric,
+        autoInit: false,
+      );
+      await securityProvider.init();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<SecurityProvider>.value(value: securityProvider),
+            ChangeNotifierProvider<AccountProvider>.value(value: accountProvider),
+            ChangeNotifierProvider<SyncProvider>.value(value: syncProvider),
+          ],
+          child: const MaterialApp(
+            home: AuthGate(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(LockScreen), findsOneWidget);
+
+      // Now user unlocks with biometric
+      mockBiometric.mockAuthenticateResult = true;
+      final unlocked = await securityProvider.authenticateAndUnlock();
+      expect(unlocked, isTrue);
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.byType(LockScreen), findsNothing);
     });
   });
 }
