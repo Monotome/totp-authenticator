@@ -20,6 +20,7 @@ from totp_authenticator.storage import (
     load_settings,
     remove_encryption,
     rename_account,
+    reset_vault,
     restore_backup,
     save_settings,
     set_encryption,
@@ -590,18 +591,18 @@ class TOTPApp:
         tk.Label(
             self.lock_frame, text="🔒 App Locked", font=("Segoe UI", 16, "bold"),
             bg=self.c["bg"], fg=self.c["fg"],
-        ).pack(pady=(80, 20))
+        ).pack(pady=(50, 16))
 
         tk.Label(
             self.lock_frame, text="Enter Master Password:", font=("Segoe UI", 10),
             bg=self.c["bg"], fg=self.c["fg_dim"],
-        ).pack(pady=(0, 10))
+        ).pack(pady=(0, 8))
 
         self.pwd_entry = tk.Entry(
             self.lock_frame, font=("Segoe UI", 14), bg=self.c["bg_entry"], fg=self.c["fg"],
             relief="flat", insertbackground="white", width=20, show="*", justify="center",
         )
-        self.pwd_entry.pack(pady=10)
+        self.pwd_entry.pack(pady=8)
         self.pwd_entry.focus_set()
 
         self.lbl_pwd_error = tk.Label(
@@ -614,7 +615,23 @@ class TOTPApp:
             bg=self.c["blue"], fg=self.c["bg"], relief="flat", padx=24, pady=6,
             cursor="hand2", command=self._try_unlock,
         )
-        btn.pack(pady=20)
+        btn.pack(pady=(16, 8))
+
+        btn_reset = tk.Button(
+            self.lock_frame,
+            text="Forgot password? Reset vault",
+            font=("Segoe UI", 9, "underline"),
+            bg=self.c["bg"],
+            fg=self.c["fg_dim"],
+            activebackground=self.c["bg"],
+            activeforeground=self.c["red"],
+            relief="flat",
+            borderwidth=0,
+            cursor="hand2",
+            command=self._confirm_reset_vault,
+        )
+        btn_reset.pack(pady=(0, 10))
+
         self.root.bind("<Return>", lambda e: self._try_unlock())
 
     def _try_unlock(self) -> None:
@@ -626,6 +643,113 @@ class TOTPApp:
         except InvalidPasswordError:
             self.pwd_entry.delete(0, "end")
             self.lbl_pwd_error.config(text="Incorrect password. Please try again.")
+
+    def _confirm_reset_vault(self) -> None:
+        """Open a confirmation modal to reset vault and master password."""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Reset Vault Confirmation")
+        dialog.geometry("420x290")
+        dialog.configure(bg=self.c["bg"])
+        dialog.resizable(False, False)
+        dialog.grab_set()
+        dialog.transient(self.root)
+
+        tk.Label(
+            dialog,
+            text="⚠️ Reset Master Password",
+            font=("Segoe UI", 13, "bold"),
+            bg=self.c["bg"],
+            fg=self.c["red"],
+        ).pack(pady=(18, 8))
+
+        warning_text = (
+            "Resetting your vault will remove password protection\n"
+            "and permanently delete all encrypted accounts.\n\n"
+            "An automatic backup of your current config will be\n"
+            "saved to your home directory before wiping.\n\n"
+            "Type RESET to confirm:"
+        )
+        tk.Label(
+            dialog,
+            text=warning_text,
+            font=("Segoe UI", 9),
+            bg=self.c["bg"],
+            fg=self.c["fg"],
+            justify="center",
+        ).pack(pady=(0, 10))
+
+        confirm_entry = tk.Entry(
+            dialog,
+            font=("Segoe UI", 11),
+            bg=self.c["bg_entry"],
+            fg=self.c["fg"],
+            relief="flat",
+            insertbackground="white",
+            width=14,
+            justify="center",
+        )
+        confirm_entry.pack(pady=4)
+        confirm_entry.focus_set()
+
+        lbl_error = tk.Label(
+            dialog, text="", font=("Segoe UI", 8), bg=self.c["bg"], fg=self.c["red"]
+        )
+        lbl_error.pack()
+
+        btn_box = tk.Frame(dialog, bg=self.c["bg"])
+        btn_box.pack(pady=14)
+
+        def _do_reset() -> None:
+            if confirm_entry.get().strip().upper() != "RESET":
+                lbl_error.config(text="Please type RESET to proceed.")
+                return
+
+            backup_path = reset_vault(backup=True)
+            dialog.destroy()
+
+            backup_msg = f"\n\nA backup copy was created at:\n{backup_path}" if backup_path else ""
+            messagebox.showinfo(
+                "Vault Reset",
+                (
+                    f"Your vault has been reset successfully.{backup_msg}\n\n"
+                    "You can now use the app or set a new password in Security Settings."
+                ),
+                parent=self.root,
+            )
+
+            # Unbind lock screen hotkeys and transition to clean main app
+            self.root.unbind("<Return>")
+            self._init_main_app(None)
+
+        btn_cancel = tk.Button(
+            btn_box,
+            text="Cancel",
+            font=("Segoe UI", 9),
+            bg=self.c["surface"],
+            fg=self.c["fg"],
+            relief="flat",
+            padx=14,
+            pady=4,
+            cursor="hand2",
+            command=dialog.destroy,
+        )
+        btn_cancel.pack(side="left", padx=8)
+
+        btn_confirm = tk.Button(
+            btn_box,
+            text="Reset Vault",
+            font=("Segoe UI", 9, "bold"),
+            bg=self.c["red"],
+            fg=self.c["bg"],
+            relief="flat",
+            padx=14,
+            pady=4,
+            cursor="hand2",
+            command=_do_reset,
+        )
+        btn_confirm.pack(side="left", padx=8)
+
+        confirm_entry.bind("<Return>", lambda e: _do_reset())
 
     def _open_security_dialog(self) -> None:
         dialog = tk.Toplevel(self.root)
