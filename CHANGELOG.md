@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [v0.7.0] - 2026-11-05
+## [v0.6.2] - 2026-11-05
 ### Added
-- **Mobile Companion App (`apps/mobile`)**: Initial cross-platform mobile client for Android and iOS built with Flutter.
+- **Mobile Companion App (`apps/mobile`)**: Initial cross-platform mobile client preview for Android and iOS built with Flutter.
 - **Camera QR Scanner**: Real-time camera QR scanning powered by `mobile_scanner`, custom HUD reticle, laser scan animation, and instant RFC 6238 OTP verification.
 - **Instant OTP Preview**: Real-time 6-digit preview confirmation sheet prior to saving accounts.
 - **URI & Manual Import**: Fast parsing of `otpauth://` links and manual setup key entry.
