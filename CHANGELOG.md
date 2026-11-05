@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.7.0] - 2026-11-05
+### Added
+- **Official Mobile Companion App (`apps/mobile`)**: Multi-platform companion app for Android and iOS built with Flutter & Material 3.
+- **Biometric App Protection (`local_auth`)**: Fingerprint, Face ID, and device PIN/pattern lock on cold startup and auto-lock upon background resumption.
+- **Multitasking Privacy Shield**: Automatic privacy blur overlay preventing OTP secrets leakage in OS recent apps and multitasking views.
+- **End-to-End Encrypted Cloud Sync**: Zero-knowledge synchronization with FastAPI backend (`apps/api`), 100% interoperable with Desktop (`apps/ui`) via Fernet and PBKDF2 (480,000 rounds).
+- **Camera QR Scanner & Live OTP Preview**: Real-time camera QR scanning with custom HUD reticle and instant code verification.
+- **Hardware Keystore Security**: Android Keystore and iOS Keychain hardware-backed storage for JWT tokens and master passwords.
+- **Automated Multi-Platform Release CI/CD**: Release workflow builds and publishes both Windows standalone executable ZIP and Android mobile APK.
+
 ## [v0.6.3] - 2026-11-05
 ### Added
 - **Mobile Cloud Sync & Settings (`apps/mobile`)**: Full End-to-End Encrypted (E2EE) synchronization with FastAPI backend (`apps/api`), 100% interoperable with Desktop client.
