@@ -28,7 +28,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Quét mã QR để tự động thêm tài khoản xác thực 2FA.</string>
-	<true/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Xác thực Face ID / Touch ID để bảo vệ các mã xác thực 2FA của bạn.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
