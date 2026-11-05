@@ -45,6 +45,13 @@ class AccountProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Replace all accounts (used during Cloud Sync merge) and persist.
+  Future<void> replaceAccounts(List<Account> newAccounts) async {
+    _accounts = List<Account>.from(newAccounts);
+    await StorageService.saveAccounts(_accounts);
+    notifyListeners();
+  }
+
   /// Remove an account by id and persist.
   Future<void> removeAccount(String id) async {
     _accounts.removeWhere((a) => a.id == id);
