@@ -33,7 +33,7 @@ def test_parse_uri_fixes_base32_padding():
     uri = "otpauth://totp/Test?secret=P5BCS6BUKFD3NAO6"
     account = parse_uri(uri)
     assert account.secret == "P5BCS6BUKFD3NAO6"
-    
+
     # Let's test an odd length one that needs padding
     uri = "otpauth://totp/Test?secret=JBSWY3DP" # length 8
     account = parse_uri(uri)
@@ -67,6 +67,6 @@ def test_parse_invalid_base32_secret():
 def test_parse_empty_strings():
     with pytest.raises(InvalidURIError):
         parse_uri("")
-        
+
     with pytest.raises(InvalidURIError):
         parse_uri("   ")

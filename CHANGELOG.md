@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.6.3] - 2026-11-05
+### Added
+- **Mobile Cloud Sync & Settings (`apps/mobile`)**: Full End-to-End Encrypted (E2EE) synchronization with FastAPI backend (`apps/api`), 100% interoperable with Desktop client.
+- **Zero-Knowledge Cryptography**: Fernet (AES-128-CBC + HMAC-SHA256) and PBKDF2-HMAC-SHA256 with 480,000 iterations.
+- **Background Isolate Crypto**: Heavy PBKDF2 computation offloaded via `compute()` maintaining 60/120fps UI fluidity.
+- **Secure Hardware Storage**: JWT access token and master encryption password protected in Android Keystore / iOS Keychain via `flutter_secure_storage`.
+- **1-Click Bidirectional Sync**: Automatic Pull -> Decrypt -> Merge -> Encrypt -> Push flow with 409 Conflict resolution.
+- **Settings Screen & UI Polish**: Status badge, quick emulator/localhost presets, E2EE master password dialog, and app security info.
+- **Android APK CI/CD Packaging**: GitHub Actions release pipeline now automatically builds and attaches `TOTP-Authenticator-vX.Y.Z-android.apk` alongside Windows zip.
+
 ## [v0.6.2] - 2026-11-05
 ### Added
 - **Mobile Companion App (`apps/mobile`)**: Initial cross-platform mobile client preview for Android and iOS built with Flutter.
