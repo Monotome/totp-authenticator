@@ -192,5 +192,81 @@ void main() {
 
       provider.dispose();
     });
+
+    test('lifecycle does not lock on AppLifecycleState.inactive alone', () async {
+      SharedPreferences.setMockInitialValues({
+        'security_biometric_enabled': true,
+        'security_auto_lock_seconds': 0, // Immediately
+      });
+
+      final provider = SecurityProvider(
+        biometricService: mockService,
+        autoInit: false,
+      );
+      await provider.init();
+      provider.unlockDirectly();
+      expect(provider.isLocked, isFalse);
+
+      // System dialog shows (inactive)
+      provider.didChangeAppLifecycleState(AppLifecycleState.inactive);
+      expect(provider.isLocked, isFalse);
+
+      // System dialog closes (resumed)
+      provider.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      expect(provider.isLocked, isFalse);
+
+      provider.dispose();
+    });
+
+    test('resuming immediately after authenticateAndUnlock does not re-lock (grace period)', () async {
+      SharedPreferences.setMockInitialValues({
+        'security_biometric_enabled': true,
+        'security_auto_lock_seconds': 0, // Immediately
+      });
+
+      final provider = SecurityProvider(
+        biometricService: mockService,
+        autoInit: false,
+      );
+      await provider.init();
+      expect(provider.isLocked, isTrue);
+
+      mockService.mockAuthenticateResult = true;
+      final success = await provider.authenticateAndUnlock();
+      expect(success, isTrue);
+      expect(provider.isLocked, isFalse);
+
+      // Activity resume event arriving after authentication
+      provider.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      expect(provider.isLocked, isFalse, reason: 'App must remain unlocked, preventing infinite loop');
+
+      provider.dispose();
+    });
+
+    test('toggleBiometric keeps app unlocked in current session and does not relock on resume', () async {
+      SharedPreferences.setMockInitialValues({
+        'security_biometric_enabled': false,
+        'security_auto_lock_seconds': 0,
+      });
+
+      final provider = SecurityProvider(
+        biometricService: mockService,
+        autoInit: false,
+      );
+      await provider.init();
+      expect(provider.isLocked, isFalse);
+
+      mockService.mockAuthenticateResult = true;
+      final success = await provider.toggleBiometric(true);
+      expect(success, isTrue);
+      expect(provider.isBiometricEnabled, isTrue);
+      expect(provider.isLocked, isFalse);
+
+      // Activity resume event arriving after toggling biometrics
+      provider.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      expect(provider.isLocked, isFalse, reason: 'User must remain in settings without being locked out');
+
+      provider.dispose();
+    });
   });
 }
