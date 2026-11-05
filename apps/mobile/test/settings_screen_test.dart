@@ -114,7 +114,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Thông tin ứng dụng'), findsOneWidget);
-      expect(find.text('v0.6.2'), findsOneWidget);
+      expect(find.text('v0.6.3'), findsOneWidget);
 
       syncProvider.dispose();
     });

@@ -180,7 +180,7 @@ class TestSettings:
         add_account("Test", VALID_SECRET)
         settings = Settings(theme="light", window_x=10, window_y=20)
         save_settings(settings)
-        
+
         # Accounts should still be there
         accounts = load_accounts()
         assert len(accounts) == 1
@@ -189,9 +189,9 @@ class TestSettings:
     def test_save_accounts_does_not_overwrite_settings(self):
         settings = Settings(theme="light", window_x=10, window_y=20)
         save_settings(settings)
-        
+
         add_account("Test", VALID_SECRET)
-        
+
         # Settings should still be there
         loaded = load_settings()
         assert loaded.theme == "light"
@@ -206,30 +206,30 @@ class TestEncryption:
         # Create some initial plaintext data
         add_account("Test", VALID_SECRET)
         assert not is_config_encrypted()
-        
+
         # Set encryption
         key = set_encryption("my_password")
         assert is_config_encrypted()
-        
+
         # Verify
         verified_key = verify_password("my_password")
         assert key == verified_key
-        
+
     def test_verify_fails_with_wrong_password(self):
         add_account("Test", VALID_SECRET)
         set_encryption("my_password")
-        
+
         from totp_authenticator.crypto import InvalidPasswordError
         with pytest.raises(InvalidPasswordError):
             verify_password("wrong_password")
-            
+
     def test_remove_encryption(self):
         add_account("Test", VALID_SECRET)
         key = set_encryption("my_password")
-        
+
         remove_encryption(key)
         assert not is_config_encrypted()
-        
+
         # Data is back to plaintext, loadable without key
         accounts = load_accounts()
         assert len(accounts) == 1
