@@ -84,6 +84,8 @@ Whenever modifying or generating code, AI agents **MUST** strictly adhere to the
    * Secret comparisons, token checks, and hashes must always use constant-time comparisons (`hmac.compare_digest`).
 5. **Secrets in Logs**:
    * Never log Base32 secrets, raw passwords, or authorization tokens in console outputs, logging handlers, or UI dialogs.
+6. **Continuous Atomic Commits**:
+   * During plan implementation, commit logical units and incremental milestones immediately once verified (tests pass & lint clean). **Never** delay committing until the very end to batch everything into a single mega-commit. Commit early, commit often, and keep commits atomic.
 
 ---
 
@@ -193,3 +195,4 @@ Before completing any user request or committing changes:
 2. **Test Validation**: Run the relevant `pytest` or `flutter test` command to guarantee all existing and newly authored tests pass.
 3. **No Secret Leaks**: Verify that no real secret keys, private credentials, or auth tokens have been added to files or Git history.
 4. **Skill Adherence**: Verify that changes adhere to the corresponding rules outlined in `.agents/skills/`.
+5. **Continuous & Incremental Commits**: Commit logical steps immediately during plan execution instead of waiting until the end to batch everything into a single massive commit.
