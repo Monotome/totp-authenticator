@@ -77,6 +77,14 @@ Items are loosely prioritized within each milestone.
 
 ---
 
+## 🔐 v0.8.0 — Desktop Vault Recovery (Current)
+
+- [x] Master Password Vault Reset on Desktop Lock Screen (Safe wipe with auto-backup)
+- [x] Catppuccin-themed safety confirmation modal with `RESET` verification
+- [x] Direct transition to unlocked state without restarting application
+
+---
+
 ## 📦 v1.0.0 — Stable Release
 
 - [ ] Desktop + mobile feature parity stabilized
@@ -91,7 +99,6 @@ Items are loosely prioritized within each milestone.
 
 These are ideas that have been raised but not yet scheduled:
 
-- Master Password Vault Reset on Desktop Lock Screen (Safe wipe with auto-backup)
 - Browser extension integration
 - TOTP token search / filter
 - Localization / i18n support
