@@ -177,3 +177,80 @@ def test_toolbar_action_buttons(tk_root):
 
     if app._update_job:
         tk_root.after_cancel(app._update_job)
+
+
+def test_toolbar_buttons_geometry_and_alignment(tk_root):
+    """Verify that all toolbar buttons are strictly aligned on the same horizontal baseline."""
+    tk_root.deiconify()
+    try:
+        app = TOTPApp(tk_root)
+        tk_root.update()
+
+        # Vertical baseline alignment (all 3 buttons must share identical Y coordinate)
+        y_sync = app.btn_sync.winfo_rooty()
+        y_sec = app.btn_security.winfo_rooty()
+        y_thm = app.btn_theme_toggle.winfo_rooty()
+        assert (
+            y_sync == y_sec == y_thm
+        ), f"Toolbar buttons misaligned vertically: {y_sync}, {y_sec}, {y_thm}"
+
+        # Identical bounding box dimensions
+        h_sync = app.btn_sync.winfo_height()
+        h_sec = app.btn_security.winfo_height()
+        h_thm = app.btn_theme_toggle.winfo_height()
+        assert h_sync == h_sec == h_thm
+
+        w_sync = app.btn_sync.winfo_width()
+        w_sec = app.btn_security.winfo_width()
+        w_thm = app.btn_theme_toggle.winfo_width()
+        assert w_sync == w_sec == w_thm
+
+        # Strictly ordered from left to right with positive separation
+        x_sync = app.btn_sync.winfo_rootx()
+        x_sec = app.btn_security.winfo_rootx()
+        x_thm = app.btn_theme_toggle.winfo_rootx()
+        assert x_sync < x_sec < x_thm, f"Buttons not laid out left-to-right: {x_sync}, {x_sec}, {x_thm}"
+
+        if app._update_job:
+            tk_root.after_cancel(app._update_job)
+    finally:
+        tk_root.withdraw()
+
+
+def test_modern_entry_inner_wrapper_and_border_padding(tk_root):
+    """Verify modern entry has an inner container preventing focus border artifacts."""
+    app = TOTPApp(tk_root)
+    container, entry = app._create_modern_entry(app.main, width=28)
+
+    # Entry must be nested in inner frame with matching background, NOT directly on border container
+    inner = entry.master
+    assert inner != container, "Entry is packed directly inside outer border container"
+    assert inner.cget("bg") == app.c["bg_entry"]
+
+    # Initial border color
+    assert container.cget("bg") == app.c["border"]
+
+    # Focus-in illuminates border
+    entry.on_focus_in()
+    assert container.cget("bg") == app.c["border_focus"]
+
+    # Focus-out returns to standard border
+    entry.on_focus_out()
+    assert container.cget("bg") == app.c["border"]
+
+    if app._update_job:
+        tk_root.after_cancel(app._update_job)
+
+
+def test_action_icons_rendering(tk_root):
+    """Verify vector icons render crisp PhotoImage objects and cache properly."""
+    app = TOTPApp(tk_root)
+    icons = ["cloud", "gear", "sun", "moon"]
+    for icon_name in icons:
+        photo = app._get_action_icon(icon_name, "#ffffff", size=15)
+        assert photo is not None
+        assert (icon_name, "#ffffff", 15) in app._icon_cache
+
+    if app._update_job:
+        tk_root.after_cancel(app._update_job)
+

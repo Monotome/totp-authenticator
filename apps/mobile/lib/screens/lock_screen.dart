@@ -167,6 +167,7 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
               // Security reassurance footer
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     Icons.security,
@@ -174,11 +175,14 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                   ),
                   const SizedBox(width: 6),
-                  Text(
-                    'Bảo vệ bằng phần cứng an toàn của thiết bị',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                  Flexible(
+                    child: Text(
+                      'Bảo vệ bằng phần cứng an toàn của thiết bị',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
