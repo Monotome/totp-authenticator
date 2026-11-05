@@ -131,3 +131,49 @@ def test_theme_toggle_updates_ui(tk_root):
 
     if app._update_job:
         tk_root.after_cancel(app._update_job)
+
+
+def test_sidebar_buttons_theme_aware(tk_root):
+    app = TOTPApp(tk_root)
+    if app._settings.theme != "dark":
+        app._toggle_theme()
+
+    rename_btn = next(b for b in app.sidebar_buttons if b.cget("text") == "Rename")
+    delete_btn = next(b for b in app.sidebar_buttons if b.cget("text") == "Delete")
+    add_btn = next(b for b in app.sidebar_buttons if b.cget("text") == "+ Add")
+
+    # Dark mode colors
+    assert rename_btn.cget("bg") == app.c["surface"]
+    assert delete_btn.cget("bg") == app.c["surface"]
+    assert add_btn.cget("bg") == app.c["blue"]
+
+    # Toggle to light mode
+    app._toggle_theme()
+    assert rename_btn.cget("bg") == app.c["surface"]
+    assert delete_btn.cget("bg") == app.c["surface"]
+    assert add_btn.cget("bg") == app.c["blue"]
+
+    # Toggle back to dark mode
+    app._toggle_theme()
+    assert rename_btn.cget("bg") == app.c["surface"]
+    assert delete_btn.cget("bg") == app.c["surface"]
+
+    if app._update_job:
+        tk_root.after_cancel(app._update_job)
+
+
+def test_toolbar_action_buttons(tk_root):
+    app = TOTPApp(tk_root)
+    assert hasattr(app, "toolbar_frame")
+    assert hasattr(app, "btn_sync")
+    assert hasattr(app, "btn_security")
+    assert hasattr(app, "btn_theme_toggle")
+
+    # Check button sizes and attributes
+    assert app.btn_sync.cget("width") == 28
+    assert app.btn_security.cget("width") == 28
+    assert app.btn_theme_toggle.cget("width") == 28
+    assert hasattr(app.btn_sync, "_tooltip")
+
+    if app._update_job:
+        tk_root.after_cancel(app._update_job)
