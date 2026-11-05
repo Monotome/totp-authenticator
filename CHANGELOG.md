@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- **Mandatory Documentation Synchronization (`AGENTS.md`)**: Enforced rule requiring all future feature implementations, bug fixes, refactorings, and architecture changes to be documented in `CHANGELOG.md` and `docs/` in the same PR.
+- **Roadmap Update**: Added desktop Master Password Vault Reset & Auto-Backup to planned improvements (`docs/ROADMAP.md`).
 
 ## [v0.7.0] - 2026-11-05
 ### Added
