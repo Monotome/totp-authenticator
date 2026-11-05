@@ -26,6 +26,8 @@
 	<string>$(PRODUCT_COPYRIGHT)</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Quét mã QR để tự động thêm tài khoản xác thực 2FA.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>
