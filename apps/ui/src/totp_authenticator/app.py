@@ -6,11 +6,10 @@ from tkinter import filedialog, messagebox, simpledialog
 
 import pyperclip
 
+from totp_authenticator.api import AuthenticationError, ConflictError, SyncClientError
 from totp_authenticator.core import get_code, get_remaining_seconds, validate_secret
 from totp_authenticator.crypto import InvalidPasswordError
 from totp_authenticator.parser import InvalidURIError, parse_uri
-from totp_authenticator.api import AuthenticationError, ConflictError, SyncClientError
-from totp_authenticator.sync_manager import SyncManager
 from totp_authenticator.storage import (
     Account,
     add_account,
@@ -26,6 +25,7 @@ from totp_authenticator.storage import (
     set_encryption,
     verify_password,
 )
+from totp_authenticator.sync_manager import SyncManager
 
 # ── Colour palettes (Catppuccin Mocha for Dark, Latte for Light) ───────────
 THEMES = {
@@ -808,7 +808,7 @@ class TOTPApp:
         def _refresh_ui() -> None:
             for w in dialog.winfo_children():
                 w.destroy()
-            
+
             tk.Label(
                 dialog, text="Cloud Sync (E2EE) ☁️", font=("Segoe UI", 12, "bold"),
                 bg=self.c["bg"], fg=self.c["fg"], pady=10
@@ -816,68 +816,125 @@ class TOTPApp:
 
             if self._settings.sync_token:
                 # Logged in UI
-                tk.Label(dialog, text="Status: Connected to Server", bg=self.c["bg"], fg=self.c["green"], font=("Segoe UI", 10)).pack(pady=5)
-                
+                tk.Label(
+                    dialog,
+                    text="Status: Connected to Server",
+                    bg=self.c["bg"],
+                    fg=self.c["green"],
+                    font=("Segoe UI", 10),
+                ).pack(pady=5)
+
                 def _do_sync(action: str) -> None:
-                    pwd = simpledialog.askstring("E2EE Password", f"Enter E2EE/Sync Password to {action} data:", show="*", parent=dialog)
-                    if not pwd: return
-                    
+                    pwd = simpledialog.askstring(
+                        "E2EE Password",
+                        f"Enter E2EE/Sync Password to {action} data:",
+                        show="*",
+                        parent=dialog,
+                    )
+                    if not pwd:
+                        return
+
                     manager = SyncManager(self._settings, pwd)
                     try:
                         if action == "Push":
                             manager.push()
-                            messagebox.showinfo("Success", "Data securely pushed to cloud.", parent=dialog)
+                            messagebox.showinfo(
+                                "Success", "Data securely pushed to cloud.", parent=dialog
+                            )
                         else:
                             manager.pull_and_merge()
                             self._accounts = load_accounts(self._current_key)
                             self._refresh_sidebar()
-                            messagebox.showinfo("Success", "Data pulled and merged to local device.", parent=dialog)
+                            messagebox.showinfo(
+                                "Success",
+                                "Data pulled and merged to local device.",
+                                parent=dialog,
+                            )
                     except (AuthenticationError, ConflictError, SyncClientError) as e:
                         messagebox.showerror("Sync Error", str(e), parent=dialog)
                     except Exception as e:
                         messagebox.showerror("Error", f"Failed: {e}", parent=dialog)
 
-                tk.Button(dialog, text="Pull down from Cloud (Merge)", bg=self.c["surface"], fg=self.c["fg"], cursor="hand2", command=lambda: _do_sync("Pull")).pack(pady=10, fill="x", padx=40)
-                tk.Button(dialog, text="Push up to Cloud", bg=self.c["surface"], fg=self.c["fg"], cursor="hand2", command=lambda: _do_sync("Push")).pack(pady=10, fill="x", padx=40)
-                
+                tk.Button(
+                    dialog,
+                    text="Pull down from Cloud (Merge)",
+                    bg=self.c["surface"],
+                    fg=self.c["fg"],
+                    cursor="hand2",
+                    command=lambda: _do_sync("Pull"),
+                ).pack(pady=10, fill="x", padx=40)
+                tk.Button(
+                    dialog,
+                    text="Push up to Cloud",
+                    bg=self.c["surface"],
+                    fg=self.c["fg"],
+                    cursor="hand2",
+                    command=lambda: _do_sync("Push"),
+                ).pack(pady=10, fill="x", padx=40)
+
                 def _logout() -> None:
                     self._settings.sync_token = ""
                     save_settings(self._settings)
                     _refresh_ui()
-                    
-                tk.Button(dialog, text="Logout", bg=self.c["red"], fg=self.c["bg"], cursor="hand2", command=_logout).pack(pady=30)
-                
+
+                tk.Button(
+                    dialog,
+                    text="Logout",
+                    bg=self.c["red"],
+                    fg=self.c["bg"],
+                    cursor="hand2",
+                    command=_logout,
+                ).pack(pady=30)
+
             else:
                 # Login UI
-                tk.Label(dialog, text="Server URL:", bg=self.c["bg"], fg=self.c["fg"]).pack(anchor="w", padx=40)
-                url_entry = tk.Entry(dialog, bg=self.c["bg_entry"], fg=self.c["fg"], insertbackground="white")
+                tk.Label(
+                    dialog, text="Server URL:", bg=self.c["bg"], fg=self.c["fg"]
+                ).pack(anchor="w", padx=40)
+                url_entry = tk.Entry(
+                    dialog, bg=self.c["bg_entry"], fg=self.c["fg"], insertbackground="white"
+                )
                 url_entry.insert(0, self._settings.sync_server_url)
                 url_entry.pack(fill="x", padx=40, pady=2)
-                
-                tk.Label(dialog, text="Username:", bg=self.c["bg"], fg=self.c["fg"]).pack(anchor="w", padx=40, pady=(15, 0))
-                user_entry = tk.Entry(dialog, bg=self.c["bg_entry"], fg=self.c["fg"], insertbackground="white")
+
+                tk.Label(
+                    dialog, text="Username:", bg=self.c["bg"], fg=self.c["fg"]
+                ).pack(anchor="w", padx=40, pady=(15, 0))
+                user_entry = tk.Entry(
+                    dialog, bg=self.c["bg_entry"], fg=self.c["fg"], insertbackground="white"
+                )
                 user_entry.pack(fill="x", padx=40, pady=2)
-                
-                tk.Label(dialog, text="Password:", bg=self.c["bg"], fg=self.c["fg"]).pack(anchor="w", padx=40, pady=(10, 0))
-                pwd_entry = tk.Entry(dialog, show="*", bg=self.c["bg_entry"], fg=self.c["fg"], insertbackground="white")
+
+                tk.Label(
+                    dialog, text="Password:", bg=self.c["bg"], fg=self.c["fg"]
+                ).pack(anchor="w", padx=40, pady=(10, 0))
+                pwd_entry = tk.Entry(
+                    dialog,
+                    show="*",
+                    bg=self.c["bg_entry"],
+                    fg=self.c["fg"],
+                    insertbackground="white",
+                )
                 pwd_entry.pack(fill="x", padx=40, pady=2)
-                
+
                 def _auth(is_register: bool) -> None:
                     self._settings.sync_server_url = url_entry.get().strip()
                     save_settings(self._settings)
-                    
+
                     u = user_entry.get().strip()
                     p = pwd_entry.get().strip()
                     if not u or not p:
                         messagebox.showerror("Error", "Missing credentials", parent=dialog)
                         return
-                        
+
                     manager = SyncManager(self._settings, p)
                     try:
-                        # For login API we only need any string as sync_password, so we just pass the auth pwd
+                        # For login API we only need any string as sync_password
                         if is_register:
                             manager.client.register(u, p)
-                            messagebox.showinfo("Success", "Registered! You can now log in.", parent=dialog)
+                            messagebox.showinfo(
+                                "Success", "Registered! You can now log in.", parent=dialog
+                            )
                         else:
                             manager.client.login(u, p)
                             self._settings.sync_token = manager.client.token
@@ -886,8 +943,23 @@ class TOTPApp:
                     except Exception as e:
                         messagebox.showerror("Error", str(e), parent=dialog)
 
-                tk.Button(dialog, text="Login", bg=self.c["blue"], fg=self.c["bg"], font=("Segoe UI", 10, "bold"), cursor="hand2", command=lambda: _auth(False)).pack(pady=20)
-                tk.Button(dialog, text="Register new Account", bg=self.c["surface"], fg=self.c["fg"], cursor="hand2", command=lambda: _auth(True)).pack()
+                tk.Button(
+                    dialog,
+                    text="Login",
+                    bg=self.c["blue"],
+                    fg=self.c["bg"],
+                    font=("Segoe UI", 10, "bold"),
+                    cursor="hand2",
+                    command=lambda: _auth(False),
+                ).pack(pady=20)
+                tk.Button(
+                    dialog,
+                    text="Register new Account",
+                    bg=self.c["surface"],
+                    fg=self.c["fg"],
+                    cursor="hand2",
+                    command=lambda: _auth(True),
+                ).pack()
 
         _refresh_ui()
 

@@ -1,3 +1,3 @@
 """TOTP Authenticator - A lightweight, offline 2FA code generator for Windows."""
 
-__version__ = "0.5.0"
+__version__ = "0.7.0"
