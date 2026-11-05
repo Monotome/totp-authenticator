@@ -28,10 +28,9 @@ Tag & Push Trigger
          │
          ▼
 GitHub Actions (.github/workflows/release.yml)
-  ├── Setup Python 3.12 on windows-latest
-  ├── Compile standalone binary with Nuitka (totp-auth.exe)
-  ├── Package ZIP: TOTP-Authenticator-vX.Y.Z-windows.zip
-  └── Publish GitHub Release with auto-generated release notes
+  ├── Job 1 (Desktop Windows): Nuitka -> TOTP-Authenticator-vX.Y.Z-windows.zip
+  ├── Job 2 (Mobile Android): Flutter -> TOTP-Authenticator-vX.Y.Z-android.apk
+  └── Job 3 (Publish Release): Publishes GitHub Release with both Windows ZIP & Android APK
 ```
 
 ---
@@ -138,7 +137,9 @@ git push origin vX.Y.Z
 2. Inspect the **Release** workflow run.
 3. Once completed (~5-8 minutes), verify that the release package appears under:
    `https://github.com/SilvaHerald/totp-authenticator/releases/tag/vX.Y.Z`
-4. Verify asset download: `TOTP-Authenticator-vX.Y.Z-windows.zip`.
+4. Verify asset downloads:
+   - `TOTP-Authenticator-vX.Y.Z-windows.zip` (Desktop standalone executable)
+   - `TOTP-Authenticator-vX.Y.Z-android.apk` (Android mobile APK)
 
 ---
 

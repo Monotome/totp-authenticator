@@ -9,7 +9,8 @@ permissions:
   contents: write
 
 jobs:
-  build-and-release:
+  build-desktop:
+    name: Build Desktop (Windows .exe)
     runs-on: windows-latest
 
     steps:
@@ -44,8 +45,63 @@ jobs:
         run: |
           Compress-Archive -Path dist/main.dist/* -DestinationPath dist/TOTP-Authenticator-${{ github.ref_name }}-windows.zip
 
+      - name: Upload Desktop Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows
+          path: apps/ui/dist/TOTP-Authenticator-${{ github.ref_name }}-windows.zip
+
+  build-mobile-android:
+    name: Build Mobile (Android .apk)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Install dependencies
+        working-directory: apps/mobile
+        run: flutter pub get
+
+      - name: Build APK
+        working-directory: apps/mobile
+        run: flutter build apk --release
+
+      - name: Prepare APK Artifact
+        run: |
+          cp apps/mobile/build/app/outputs/flutter-apk/app-release.apk TOTP-Authenticator-${{ github.ref_name }}-android.apk
+
+      - name: Upload Android Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-android
+          path: TOTP-Authenticator-${{ github.ref_name }}-android.apk
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: [build-desktop, build-mobile-android]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: release-assets
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: apps/ui/dist/TOTP-Authenticator-${{ github.ref_name }}-windows.zip
+          files: release-assets/*
           generate_release_notes: true
