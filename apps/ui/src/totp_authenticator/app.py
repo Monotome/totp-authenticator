@@ -181,13 +181,24 @@ class TOTPApp:
                 f"{width}x{height}+{self._settings.window_x}+{self._settings.window_y}"
             )
         else:
-            self.root.geometry(f"{width}x{height}")
+            try:
+                self.root.update_idletasks()
+                sw = self.root.winfo_screenwidth()
+                sh = self.root.winfo_screenheight()
+                x = max(20, (sw - width) // 2)
+                y = max(20, (sh - height) // 2)
+                self.root.geometry(f"{width}x{height}+{x}+{y}")
+            except Exception:
+                self.root.geometry(f"{width}x{height}")
 
         self.root.configure(bg=self.c["bg"])
         self._copy_timer: str | None = None
         self._current_key: bytes | None = None
         self._last_activity = time.time()
         self._update_job: str | None = None
+        self._toast_frame: tk.Frame | None = None
+        self._toast_lbl: tk.Label | None = None
+        self._toast_timer: str | None = None
         self._card_widgets: dict[str, list[tk.Widget]] = {}
         self._icon_cache: dict[tuple[str, str, int], ImageTk.PhotoImage] = {}
 
@@ -591,6 +602,89 @@ class TOTPApp:
         btn.bind("<Leave>", _on_leave)
         return btn
 
+    def _position_dialog(
+        self,
+        dialog: tk.Toplevel,
+        width: int,
+        height: int,
+        parent: tk.Widget | None = None,
+    ) -> None:
+        """Position a dialog centered directly over its parent window or screen."""
+        p = parent or self.root
+        dialog.transient(p)
+        dialog.resizable(False, False)
+
+        try:
+            p.update_idletasks()
+            dialog.update_idletasks()
+
+            # Coordinates of parent window
+            px = p.winfo_rootx()
+            py = p.winfo_rooty()
+            pw = p.winfo_width()
+            ph = p.winfo_height()
+
+            # If parent hasn't been mapped or has invalid size, fallback to screen center
+            if pw <= 1 or ph <= 1 or px < -1000 or py < -1000:
+                sw = dialog.winfo_screenwidth()
+                sh = dialog.winfo_screenheight()
+                x = max(20, (sw - width) // 2)
+                y = max(20, (sh - height) // 2)
+            else:
+                x = px + (pw - width) // 2
+                y = py + (ph - height) // 2
+
+                # Clamp to screen bounds
+                sw = dialog.winfo_screenwidth()
+                sh = dialog.winfo_screenheight()
+                x = max(10, min(x, sw - width - 10))
+                y = max(10, min(y, sh - height - 10))
+
+            dialog.geometry(f"{width}x{height}+{x}+{y}")
+        except Exception:
+            dialog.geometry(f"{width}x{height}")
+
+    def _show_toast(
+        self, message: str, is_error: bool = False, duration_ms: int = 2500
+    ) -> None:
+        """Show a modern floating toast notification on the main application window."""
+        if not hasattr(self, "_toast_frame") or self._toast_frame is None:
+            self._toast_frame = tk.Frame(
+                self.root,
+                padx=16,
+                pady=7,
+                highlightthickness=1,
+            )
+            self._toast_lbl = tk.Label(
+                self._toast_frame,
+                font=("Segoe UI", 9, "bold"),
+            )
+            self._toast_lbl.pack()
+            self._toast_timer = None
+
+        if getattr(self, "_toast_timer", None):
+            self.root.after_cancel(self._toast_timer)
+            self._toast_timer = None
+
+        bg_col = self.c["bg_card"]
+        border_col = self.c["red"] if is_error else self.c["green"]
+        fg_col = self.c["red"] if is_error else self.c["green"]
+        icon = "⚠️  " if is_error else "✓  "
+
+        self._toast_frame.configure(bg=bg_col, highlightbackground=border_col)
+        self._toast_lbl.configure(text=f"{icon}{message}", bg=bg_col, fg=fg_col)
+
+        # Center toast at bottom of main window
+        self._toast_frame.place(relx=0.5, rely=0.91, anchor="center")
+        self._toast_frame.lift()
+
+        def _hide() -> None:
+            if hasattr(self, "_toast_frame") and self._toast_frame:
+                self._toast_frame.place_forget()
+            self._toast_timer = None
+
+        self._toast_timer = self.root.after(duration_ms, _hide)
+
     def _prompt_text(
         self,
         title: str,
@@ -604,24 +698,9 @@ class TOTPApp:
         parent_widget = parent or self.root
         dialog = tk.Toplevel(parent_widget)
         dialog.title(title)
-        dialog.geometry("380x210")
         dialog.configure(bg=self.c["bg"])
-        dialog.resizable(False, False)
-        dialog.transient(parent_widget)
+        self._position_dialog(dialog, 380, 210, parent=parent_widget)
         dialog.grab_set()
-
-        try:
-            parent_widget.update_idletasks()
-            pw = parent_widget.winfo_width()
-            ph = parent_widget.winfo_height()
-            px = parent_widget.winfo_rootx()
-            py = parent_widget.winfo_rooty()
-            dw, dh = 380, 210
-            x = px + max(0, (pw - dw) // 2)
-            y = py + max(0, (ph - dh) // 2)
-            dialog.geometry(f"{dw}x{dh}+{x}+{y}")
-        except Exception:
-            pass
 
         content = tk.Frame(dialog, bg=self.c["bg"], padx=20, pady=16)
         content.pack(fill="both", expand=True)
@@ -1072,6 +1151,9 @@ class TOTPApp:
                 w.configure(bg=self.c["bg"], fg=self.c["fg"] if is_title else self.c["fg_dim"])
 
         self._refresh_sidebar()
+        self._show_toast(
+            f"Switched to {'Light' if self._settings.theme == 'light' else 'Dark'} Theme"
+        )
 
     # ── Sidebar & Account Cards ────────────────────────────────────────────────
 
@@ -1252,9 +1334,8 @@ class TOTPApp:
         """Open a modern dialog to add a new account."""
         dialog = tk.Toplevel(self.root)
         dialog.title("Add Account")
-        dialog.geometry("420x350")
         dialog.configure(bg=self.c["bg"])
-        dialog.resizable(False, False)
+        self._position_dialog(dialog, 430, 410, parent=self.root)
         dialog.grab_set()
         dialog.attributes("-topmost", True)
 
@@ -1295,7 +1376,18 @@ class TOTPApp:
             bg=self.c["bg"], fg=self.c["fg_dim"]
         ).pack(anchor="w", pady=(0, 2))
         uri_container, uri_entry = self._create_modern_entry(form, width=36)
-        uri_container.pack(fill="x", pady=(0, 16))
+        uri_container.pack(fill="x", pady=(0, 12))
+
+        lbl_feedback = tk.Label(
+            dialog,
+            text="",
+            font=("Segoe UI", 9, "bold"),
+            bg=self.c["bg"],
+            fg=self.c["red"],
+            justify="left",
+            wraplength=380,
+        )
+        lbl_feedback.pack(fill="x", padx=24, pady=(0, 6))
 
         def _on_uri_change(*args: object) -> None:
             uri = uri_entry.get().strip()
@@ -1306,6 +1398,7 @@ class TOTPApp:
                     name_entry.insert(0, parsed.name)
                     secret_entry.delete(0, "end")
                     secret_entry.insert(0, parsed.secret)
+                    lbl_feedback.config(text="")
                 except InvalidURIError:
                     pass
 
@@ -1315,24 +1408,25 @@ class TOTPApp:
             name = name_entry.get().strip()
             secret = secret_entry.get().strip().replace(" ", "")
             if not name:
-                messagebox.showwarning("Warning", "Account name cannot be empty.", parent=dialog)
+                lbl_feedback.config(text="⚠️ Account name cannot be empty.")
+                name_entry.focus_set()
                 return
             if not validate_secret(secret):
-                messagebox.showerror(
-                    "Error",
-                    "Invalid Secret Key.\nPlease check and try again.",
-                    parent=dialog,
+                lbl_feedback.config(
+                    text="⚠️ Invalid Secret Key. Please check Base32 format."
                 )
+                secret_entry.focus_set()
                 return
             new_account = add_account(name, secret, self._current_key)
             self._accounts = load_accounts(self._current_key)
             self._selected_id = new_account.id
             self._refresh_sidebar()
+            self._show_toast(f"Added account '{name}' successfully")
             dialog.destroy()
 
         # Action buttons
         btn_box = tk.Frame(dialog, bg=self.c["bg"])
-        btn_box.pack(fill="x", padx=24, pady=(6, 20))
+        btn_box.pack(fill="x", padx=24, pady=(0, 20))
 
         btn_cancel = self._create_pill_button(
             btn_box, text="Cancel", command=dialog.destroy, padx=16, pady=5
@@ -1350,7 +1444,7 @@ class TOTPApp:
         """Open a modern dialog to rename the selected account."""
         account = self._selected_account()
         if not account:
-            messagebox.showinfo("Info", "Please select an account first.")
+            self._show_toast("Please select an account first", is_error=True)
             return
         new_name = self._prompt_text(
             title="Rename Account",
@@ -1358,16 +1452,17 @@ class TOTPApp:
             initial_value=account.name,
             parent=self.root,
         )
-        if new_name and new_name.strip():
+        if new_name and new_name.strip() and new_name.strip() != account.name:
             rename_account(account.id, new_name.strip(), self._current_key)
             self._accounts = load_accounts(self._current_key)
             self._refresh_sidebar()
+            self._show_toast(f"Renamed account to '{new_name.strip()}'")
 
     def _open_delete_dialog(self) -> None:
         """Ask for confirmation, then delete the selected account."""
         account = self._selected_account()
         if not account:
-            messagebox.showinfo("Info", "Please select an account first.")
+            self._show_toast("Please select an account first", is_error=True)
             return
         confirmed = messagebox.askyesno(
             "Delete Account",
@@ -1380,6 +1475,7 @@ class TOTPApp:
             self._accounts = load_accounts(self._current_key)
             self._selected_id = self._accounts[0].id if self._accounts else None
             self._refresh_sidebar()
+            self._show_toast(f"Deleted account '{account.name}'")
 
     # ── Copy & Update Loop ─────────────────────────────────────────────────────
 
@@ -1548,11 +1644,9 @@ class TOTPApp:
         """Open a confirmation modal to reset vault and master password."""
         dialog = tk.Toplevel(self.root)
         dialog.title("Reset Vault Confirmation")
-        dialog.geometry("420x300")
         dialog.configure(bg=self.c["bg"])
-        dialog.resizable(False, False)
+        self._position_dialog(dialog, 420, 310, parent=self.root)
         dialog.grab_set()
-        dialog.transient(self.root)
 
         tk.Label(
             dialog,
@@ -1642,22 +1736,9 @@ class TOTPApp:
         dialog.title("Security Settings")
         is_enc = is_config_encrypted()
         dialog_w = 440
-        dialog_h = 560 if is_enc else 490
-
-        try:
-            self.root.update_idletasks()
-            rw = self.root.winfo_width()
-            rh = self.root.winfo_height()
-            rx = self.root.winfo_rootx()
-            ry = self.root.winfo_rooty()
-            x = rx + max(0, (rw - dialog_w) // 2)
-            y = ry + max(0, (rh - dialog_h) // 2)
-            dialog.geometry(f"{dialog_w}x{dialog_h}+{x}+{y}")
-        except Exception:
-            dialog.geometry(f"{dialog_w}x{dialog_h}")
-
+        dialog_h = 570 if is_enc else 500
         dialog.configure(bg=self.c["bg"])
-        dialog.resizable(False, False)
+        self._position_dialog(dialog, dialog_w, dialog_h, parent=self.root)
         dialog.grab_set()
         dialog.attributes("-topmost", True)
 
@@ -1754,7 +1835,7 @@ class TOTPApp:
             confirm_cnt, confirm_entry = self._create_modern_entry(
                 form, width=34, show="*", has_toggle=True
             )
-            confirm_cnt.pack(fill="x", pady=(0, 12))
+            confirm_cnt.pack(fill="x", pady=(0, 8))
         else:
             tk.Label(
                 form,
@@ -1778,7 +1859,24 @@ class TOTPApp:
             confirm_cnt, confirm_entry = self._create_modern_entry(
                 form, width=34, show="*", has_toggle=True
             )
-            confirm_cnt.pack(fill="x", pady=(0, 12))
+            confirm_cnt.pack(fill="x", pady=(0, 8))
+
+        lbl_feedback = tk.Label(
+            form,
+            text="",
+            font=("Segoe UI", 9, "bold"),
+            bg=self.c["bg"],
+            fg=self.c["fg_dim"],
+            wraplength=380,
+            justify="left",
+        )
+        dialog.lbl_feedback = lbl_feedback  # type: ignore[attr-defined]
+        lbl_feedback.pack(fill="x", pady=(0, 10))
+
+        def _set_feedback(msg: str, is_error: bool = False) -> None:
+            color = self.c["red"] if is_error else self.c["green"]
+            prefix = "⚠️  " if is_error else "✓  "
+            lbl_feedback.config(text=f"{prefix}{msg}", fg=color)
 
         def _save() -> None:
             timeout_str = timeout_var.get().strip()
@@ -1786,20 +1884,14 @@ class TOTPApp:
                 try:
                     mins = int(timeout_str)
                     if mins < 1:
-                        messagebox.showerror(
-                            "Invalid Timeout",
-                            "Auto-lock timeout must be at least 1 minute.",
-                            parent=dialog,
-                        )
+                        _set_feedback("Auto-lock timeout must be at least 1 minute.", is_error=True)
+                        timeout_entry.focus_set()
                         return
                     self._settings.lock_timeout_minutes = mins
                     save_settings(self._settings)
                 except ValueError:
-                    messagebox.showerror(
-                        "Invalid Timeout",
-                        "Auto-lock timeout must be a valid integer.",
-                        parent=dialog,
-                    )
+                    _set_feedback("Auto-lock timeout must be a valid integer.", is_error=True)
+                    timeout_entry.focus_set()
                     return
 
             new_pwd = new_entry.get()
@@ -1809,99 +1901,76 @@ class TOTPApp:
                 old_pwd = old_entry.get()
                 # If all password fields are blank, only timeout was updated
                 if not old_pwd and not new_pwd and not confirm_pwd:
-                    messagebox.showinfo(
-                        "Success", "Settings saved successfully.", parent=dialog
-                    )
-                    dialog.destroy()
+                    _set_feedback("Settings saved successfully!", is_error=False)
+                    btn_save.config(state="disabled")
+                    self._show_toast("Settings saved successfully")
+                    dialog.after(900, dialog.destroy)
                     return
 
                 if not old_pwd:
-                    messagebox.showerror(
-                        "Current Password Required",
-                        "Please enter your current master password to change it.",
-                        parent=dialog,
-                    )
+                    _set_feedback("Please enter your current master password.", is_error=True)
+                    old_entry.focus_set()
                     return
 
                 try:
                     verified_key = verify_password(old_pwd)
                 except InvalidPasswordError:
-                    messagebox.showerror(
-                        "Authentication Failed",
-                        "Incorrect current master password.",
-                        parent=dialog,
-                    )
+                    _set_feedback("Incorrect current master password.", is_error=True)
+                    old_entry.delete(0, tk.END)
+                    old_entry.focus_set()
                     return
 
                 if not new_pwd:
-                    messagebox.showerror(
-                        "New Password Required",
-                        "Please enter a new master password.",
-                        parent=dialog,
-                    )
+                    _set_feedback("Please enter a new master password.", is_error=True)
+                    new_entry.focus_set()
                     return
 
                 if len(new_pwd) < 6:
-                    messagebox.showerror(
-                        "Password Too Short",
-                        "New master password must be at least 6 characters long.",
-                        parent=dialog,
-                    )
+                    _set_feedback("New password must be at least 6 characters long.", is_error=True)
+                    new_entry.focus_set()
                     return
 
                 if new_pwd != confirm_pwd:
-                    messagebox.showerror(
-                        "Password Mismatch",
-                        "New password and confirmation do not match.",
-                        parent=dialog,
-                    )
+                    _set_feedback("New password and confirmation do not match.", is_error=True)
+                    confirm_entry.focus_set()
                     return
 
                 self._current_key = set_encryption(new_pwd, verified_key)
-                messagebox.showinfo(
-                    "Success", "Master password updated successfully.", parent=dialog
-                )
-                dialog.destroy()
+                _set_feedback("Master password updated successfully!", is_error=False)
+                btn_save.config(state="disabled")
+                self._show_toast("Master password updated successfully")
+                dialog.after(900, dialog.destroy)
             else:
                 # Vault is unencrypted
                 if not new_pwd and not confirm_pwd:
-                    messagebox.showinfo(
-                        "Success", "Settings saved successfully.", parent=dialog
-                    )
-                    dialog.destroy()
+                    _set_feedback("Settings saved successfully!", is_error=False)
+                    btn_save.config(state="disabled")
+                    self._show_toast("Settings saved successfully")
+                    dialog.after(900, dialog.destroy)
                     return
 
                 if not new_pwd:
-                    messagebox.showerror(
-                        "Password Required",
-                        "Please enter a master password.",
-                        parent=dialog,
-                    )
+                    _set_feedback("Please enter a master password.", is_error=True)
+                    new_entry.focus_set()
                     return
 
                 if len(new_pwd) < 6:
-                    messagebox.showerror(
-                        "Password Too Short",
-                        "Master password must be at least 6 characters long.",
-                        parent=dialog,
+                    _set_feedback(
+                        "Master password must be at least 6 characters long.", is_error=True
                     )
+                    new_entry.focus_set()
                     return
 
                 if new_pwd != confirm_pwd:
-                    messagebox.showerror(
-                        "Password Mismatch",
-                        "Master password and confirmation do not match.",
-                        parent=dialog,
-                    )
+                    _set_feedback("Master password and confirmation do not match.", is_error=True)
+                    confirm_entry.focus_set()
                     return
 
                 self._current_key = set_encryption(new_pwd, self._current_key)
-                messagebox.showinfo(
-                    "Success",
-                    "Master password set successfully. Vault is now encrypted.",
-                    parent=dialog,
-                )
-                dialog.destroy()
+                _set_feedback("Master password set successfully!", is_error=False)
+                btn_save.config(state="disabled")
+                self._show_toast("Master password set. Vault is now encrypted.")
+                dialog.after(900, dialog.destroy)
 
         def _remove() -> None:
             pwd = self._prompt_password(
@@ -1915,28 +1984,18 @@ class TOTPApp:
                 return  # Cancelled
 
             if not pwd:
-                messagebox.showerror(
-                    "Error", "Password cannot be empty.", parent=dialog
-                )
+                _set_feedback("Password cannot be empty.", is_error=True)
                 return
 
             try:
                 verified_key = verify_password(pwd)
             except InvalidPasswordError:
-                messagebox.showerror(
-                    "Authentication Failed",
-                    "Incorrect master password. Password protection was not removed.",
-                    parent=dialog,
-                )
+                _set_feedback("Incorrect master password. Protection not removed.", is_error=True)
                 return
 
             remove_encryption(verified_key)
             self._current_key = None
-            messagebox.showinfo(
-                "Success",
-                "Password protection removed. Vault is now unencrypted.",
-                parent=dialog,
-            )
+            self._show_toast("Password protection removed. Vault is unencrypted.")
             dialog.destroy()
 
         btn_box = tk.Frame(dialog, bg=self.c["bg"])
@@ -2036,24 +2095,9 @@ class TOTPApp:
         """Open the modernized Cloud Sync dialog."""
         dialog = tk.Toplevel(self.root)
         dialog.title("Cloud Sync")
-        dialog.geometry("450x510")
         dialog.configure(bg=self.c["bg"])
-        dialog.resizable(False, False)
+        self._position_dialog(dialog, 450, 520, parent=self.root)
         dialog.grab_set()
-        dialog.transient(self.root)
-
-        try:
-            dialog.update_idletasks()
-            pw = self.root.winfo_width()
-            ph = self.root.winfo_height()
-            px = self.root.winfo_rootx()
-            py = self.root.winfo_rooty()
-            dw, dh = 450, 510
-            x = px + max(0, (pw - dw) // 2)
-            y = py + max(0, (ph - dh) // 2)
-            dialog.geometry(f"{dw}x{dh}+{x}+{y}")
-        except Exception:
-            pass
 
         header = tk.Frame(dialog, bg=self.c["bg"])
         header.pack(fill="x", padx=24, pady=(20, 14))
