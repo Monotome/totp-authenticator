@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "totp-authenticator"
-version = "0.8.3"
+version = "0.8.4"
 description = "A lightweight, offline TOTP authenticator for Windows. Get your 2FA codes without reaching for your phone."
 readme = "README.md"
 license = { text = "MIT" }
