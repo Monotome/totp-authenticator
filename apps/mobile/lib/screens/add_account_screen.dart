@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../models/account.dart';
 import '../providers/account_provider.dart';
 import '../services/qr_parser_service.dart';
@@ -57,7 +58,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('✅ Đã lưu tài khoản "${account.name}"'),
+        content: Text(context.l10n.accountSavedMessage(account.name)),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -66,26 +67,27 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
 
   /// Parse an otpauth:// URI pasted by the user
   void _pasteUri() async {
+    final l10n = context.l10n;
     final controller = TextEditingController();
     final uri = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Nhập URI otpauth://'),
+        title: Text(l10n.enterUriDialogTitle),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'otpauth://totp/...',
+          decoration: InputDecoration(
+            hintText: l10n.enterUriDialogHint,
           ),
           maxLines: 3,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
-            child: const Text('Nhập'),
+            child: Text(l10n.importText),
           ),
         ],
       ),
@@ -103,8 +105,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
         _issuerController.text = parsed.issuer;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Đã trích xuất thông tin tài khoản thành công!'),
+        SnackBar(
+          content: Text(context.l10n.extractSuccess),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -119,7 +121,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Lỗi: $e'),
+          content: Text('${context.l10n.error}: $e'),
           backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -141,15 +143,16 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isEditing = widget.initialAccount != null;
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản'),
+        title: Text(isEditing ? l10n.editAccountTitle : l10n.addAccountTitle),
         actions: [
           if (!isEditing)
             IconButton(
               icon: const Icon(Icons.qr_code_scanner),
-              tooltip: 'Quét mã QR',
+              tooltip: l10n.scanQrOption,
               onPressed: _openQrScanner,
             ),
         ],
@@ -166,9 +169,9 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 FilledButton.tonalIcon(
                   onPressed: _openQrScanner,
                   icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text(
-                    'Quét mã QR máy ảnh',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                  label: Text(
+                    l10n.scanQrOption,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -182,7 +185,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 OutlinedButton.icon(
                   onPressed: _pasteUri,
                   icon: const Icon(Icons.link),
-                  label: const Text('Nhập từ URI otpauth://'),
+                  label: Text(l10n.pasteUriButton),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
@@ -201,7 +204,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: Text(
-                        'hoặc nhập thủ công',
+                        'hoặc / or',
                         style: TextStyle(
                           color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                           fontSize: 12,
@@ -221,9 +224,10 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               // Issuer
               TextFormField(
                 controller: _issuerController,
-                decoration: const InputDecoration(
-                  labelText: 'Dịch vụ / Nhà cung cấp (vd: Google, GitHub)',
-                  prefixIcon: Icon(Icons.business_outlined),
+                decoration: InputDecoration(
+                  labelText: l10n.issuerLabel,
+                  hintText: l10n.issuerHint,
+                  prefixIcon: const Icon(Icons.business_outlined),
                 ),
               ),
               const SizedBox(height: 16),
@@ -231,29 +235,31 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
               // Account name
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Tên tài khoản (Email / Username) *',
-                  prefixIcon: Icon(Icons.person_outline),
+                decoration: InputDecoration(
+                  labelText: '${l10n.accountNameLabel} *',
+                  hintText: l10n.accountNameHint,
+                  prefixIcon: const Icon(Icons.person_outline),
                 ),
                 validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Vui lòng nhập tên tài khoản' : null,
+                    (v == null || v.trim().isEmpty) ? l10n.accountNameError : null,
               ),
               const SizedBox(height: 16),
 
               // Secret key
               TextFormField(
                 controller: _secretController,
-                decoration: const InputDecoration(
-                  labelText: 'Khóa bí mật (Secret Key) *',
-                  prefixIcon: Icon(Icons.key_outlined),
+                decoration: InputDecoration(
+                  labelText: '${l10n.secretKeyLabel} *',
+                  hintText: l10n.secretKeyHint,
+                  prefixIcon: const Icon(Icons.key_outlined),
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) {
-                    return 'Vui lòng nhập khóa bí mật';
+                    return l10n.secretKeyErrorEmpty;
                   }
                   final clean = v.trim().replaceAll(' ', '').toUpperCase();
                   if (!RegExp(r'^[A-Z2-7]+=*$').hasMatch(clean)) {
-                    return 'Khóa bí mật phải là chuỗi Base32 hợp lệ (A-Z, 2-7)';
+                    return l10n.secretKeyErrorInvalid;
                   }
                   return null;
                 },
@@ -265,7 +271,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                 onPressed: _submit,
                 icon: const Icon(Icons.check),
                 label: Text(
-                  isEditing ? 'Lưu thay đổi' : 'Thêm tài khoản',
+                  isEditing ? l10n.save : l10n.addAccountButton,
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 style: FilledButton.styleFrom(

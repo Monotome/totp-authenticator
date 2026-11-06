@@ -78,6 +78,8 @@ abstract class AppLocalizations {
   String get scanCurrentCode;
   String get saveAccountButton;
   String get scanAgainButton;
+  String get cameraAccessDenied;
+  String get cameraPermissionPrompt;
 
   // ── Lock Screen ──
   String get lockTitle;
@@ -248,6 +250,11 @@ class _AppLocalizationsVi implements AppLocalizations {
   String get saveAccountButton => 'Lưu tài khoản này';
   @override
   String get scanAgainButton => 'Quét lại';
+  @override
+  String get cameraAccessDenied => 'Không thể truy cập máy ảnh';
+  @override
+  String get cameraPermissionPrompt =>
+      'Vui lòng cấp quyền máy ảnh trong Cài đặt để quét mã QR.';
 
   @override
   String get lockTitle => 'Ứng dụng đã bị khóa';
@@ -363,7 +370,7 @@ class _AppLocalizationsVi implements AppLocalizations {
   String get keyDerivationLabel => 'Dẫn xuất khóa';
 
   @override
-  String get vaultPasswordTitle => 'Nhập mật khẩu mã hóa Vault';
+  String get vaultPasswordTitle => 'Mật khẩu mã hóa (E2EE)';
   @override
   String get vaultPasswordDescription =>
       'Mật khẩu này được sử dụng để dẫn xuất khóa AES-256 mã hóa/giải mã toàn bộ tài khoản 2FA của bạn.';
@@ -471,6 +478,11 @@ class _AppLocalizationsEn implements AppLocalizations {
   String get saveAccountButton => 'Save this Account';
   @override
   String get scanAgainButton => 'Scan Again';
+  @override
+  String get cameraAccessDenied => 'Unable to access camera';
+  @override
+  String get cameraPermissionPrompt =>
+      'Please grant camera permission in Settings to scan QR codes.';
 
   @override
   String get lockTitle => 'Application Locked';
@@ -586,7 +598,7 @@ class _AppLocalizationsEn implements AppLocalizations {
   String get keyDerivationLabel => 'Key Derivation';
 
   @override
-  String get vaultPasswordTitle => 'Enter Vault Password';
+  String get vaultPasswordTitle => 'Vault Encryption Password (E2EE)';
   @override
   String get vaultPasswordDescription =>
       'This password derives the AES-256 key used to encrypt/decrypt all your 2FA accounts.';

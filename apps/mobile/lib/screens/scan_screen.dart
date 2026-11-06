@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/account_provider.dart';
 import '../services/qr_parser_service.dart';
 import '../theme.dart';
@@ -98,7 +99,7 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ Đã thêm tài khoản "${account.name}"'),
+            content: Text(context.l10n.accountSavedMessage(account.name)),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
@@ -159,6 +160,8 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -181,9 +184,9 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
                         color: AppTheme.accentRed,
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Không thể truy cập máy ảnh',
-                        style: TextStyle(
+                      Text(
+                        l10n.cameraAccessDenied,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -192,8 +195,8 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
                       const SizedBox(height: 8),
                       Text(
                         error.errorCode == MobileScannerErrorCode.permissionDenied
-                            ? 'Vui lòng cấp quyền máy ảnh trong Cài đặt để quét mã QR.'
-                            : 'Lỗi máy ảnh: ${error.errorDetails?.message ?? error.errorCode.name}',
+                            ? l10n.cameraPermissionPrompt
+                            : 'Camera error: ${error.errorDetails?.message ?? error.errorCode.name}',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.7),
@@ -211,9 +214,9 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
                           );
                         },
                         icon: const Icon(Icons.keyboard, color: Colors.white),
-                        label: const Text(
-                          'Nhập mã thủ công',
-                          style: TextStyle(color: Colors.white),
+                        label: Text(
+                          l10n.enterManualFallback,
+                          style: const TextStyle(color: Colors.white),
                         ),
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: Colors.white38),
@@ -248,6 +251,7 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
                     // Close button
                     _buildGlassCircleButton(
                       icon: Icons.close,
+                      tooltip: l10n.close,
                       onPressed: () => Navigator.pop(context),
                     ),
 
@@ -260,6 +264,7 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
                             final isOn = state.torchState == TorchState.on;
                             return _buildGlassCircleButton(
                               icon: isOn ? Icons.flash_on : Icons.flash_off,
+                              tooltip: l10n.flashTooltip,
                               color: isOn ? Colors.amber : Colors.white,
                               onPressed: () => _controller.toggleTorch(),
                             );
@@ -269,6 +274,7 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
                         // Switch camera toggle
                         _buildGlassCircleButton(
                           icon: Icons.flip_camera_ios_outlined,
+                          tooltip: l10n.cameraSwitchTooltip,
                           onPressed: () => _controller.switchCamera(),
                         ),
                       ],
@@ -295,9 +301,9 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
                     );
                   },
                   icon: const Icon(Icons.keyboard_outlined, color: Colors.white),
-                  label: const Text(
-                    'Nhập mã cài đặt thủ công',
-                    style: TextStyle(
+                  label: Text(
+                    l10n.enterManualFallback,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -317,6 +323,7 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
   Widget _buildGlassCircleButton({
     required IconData icon,
     required VoidCallback onPressed,
+    String? tooltip,
     Color color = Colors.white,
   }) {
     return Container(
@@ -327,6 +334,7 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
       ),
       child: IconButton(
         icon: Icon(icon, color: color, size: 22),
+        tooltip: tooltip,
         onPressed: onPressed,
       ),
     );

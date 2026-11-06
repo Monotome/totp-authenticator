@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 /// Result returned from [SyncPasswordDialog].
 class SyncPasswordResult {
@@ -74,6 +75,7 @@ class _SyncPasswordDialogState extends State<SyncPasswordDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -89,10 +91,10 @@ class _SyncPasswordDialogState extends State<SyncPasswordDialog> {
             child: Icon(Icons.lock_outline, color: theme.colorScheme.primary, size: 22),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text(
-              'Mật khẩu mã hóa (E2EE)',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              l10n.vaultPasswordTitle,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -103,7 +105,7 @@ class _SyncPasswordDialogState extends State<SyncPasswordDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Dữ liệu 2FA được mã hóa đầu-cuối bằng thuật toán AES-128-CBC (Fernet) và PBKDF2 (480,000 vòng lặp). Máy chủ không bao giờ biết mật khẩu này.',
+              l10n.vaultPasswordDescription,
               style: TextStyle(
                 fontSize: 13,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
@@ -116,8 +118,7 @@ class _SyncPasswordDialogState extends State<SyncPasswordDialog> {
               obscureText: _obscureText,
               autofocus: true,
               decoration: InputDecoration(
-                labelText: 'Mật khẩu E2EE',
-                hintText: 'Nhập mật khẩu mã hóa vault',
+                labelText: l10n.vaultPasswordLabel,
                 errorText: _errorText,
                 prefixIcon: const Icon(Icons.key_outlined, size: 20),
                 suffixIcon: IconButton(
@@ -174,14 +175,14 @@ class _SyncPasswordDialogState extends State<SyncPasswordDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(null),
-          child: const Text('Hủy'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: _submit,
           style: FilledButton.styleFrom(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
-          child: const Text('Xác nhận'),
+          child: Text(l10n.confirm),
         ),
       ],
     );
