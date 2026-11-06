@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [v0.8.4] - 2026-11-06
 ### Added
 - **Desktop Dynamic Window Centering & Floating Toast Notifications (`apps/ui`)**:
   - Implemented universal `_position_dialog()` helper centering all modals and popups (Add Account, Security Settings, Cloud Sync, Vault Reset, Text Prompts) directly over the parent window with boundary clamping, eliminating the bug where dialogs appeared far off to the left of the screen.
