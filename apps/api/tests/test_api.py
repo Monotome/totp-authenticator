@@ -50,9 +50,32 @@ def test_register_and_login():
     assert response.status_code == 200
     assert "access_token" in response.json()
     
+    # Case-insensitive login verification (e.g. TestUser -> testuser)
+    response = client.post("/login", data={"username": "TestUser", "password": "testpassword"})
+    assert response.status_code == 200
+    assert "access_token" in response.json()
+
+    # Case-insensitive duplicate registration check
+    response = client.post("/register", json={"username": "TestUser", "password": "testpassword"})
+    assert response.status_code == 400
+
     # Wrong password
     response = client.post("/login", data={"username": "testuser", "password": "wrong"})
     assert response.status_code == 401
+
+
+def test_registration_validation():
+    # Username too short (< 3 chars)
+    response = client.post("/register", json={"username": "ab", "password": "validpassword"})
+    assert response.status_code == 422
+
+    # Password too short (< 6 chars)
+    response = client.post("/register", json={"username": "validuser", "password": "123"})
+    assert response.status_code == 422
+
+    # Invalid characters in username
+    response = client.post("/register", json={"username": "user name!", "password": "validpassword"})
+    assert response.status_code == 422
 
 def test_sync_endpoints():
     client.post("/register", json={"username": "testuser", "password": "testpassword"})

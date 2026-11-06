@@ -498,6 +498,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Server URL Input
           TextFormField(
             controller: _serverUrlController,
+            autocorrect: false,
+            enableSuggestions: false,
+            textCapitalization: TextCapitalization.none,
+            keyboardType: TextInputType.url,
             decoration: InputDecoration(
               labelText: l10n.serverUrlLabel,
               prefixIcon: const Icon(Icons.dns_outlined, size: 20),
@@ -544,12 +548,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Username Input
           TextFormField(
             controller: _usernameController,
+            autocorrect: false,
+            enableSuggestions: false,
+            textCapitalization: TextCapitalization.none,
             decoration: InputDecoration(
               labelText: l10n.usernameLabel,
               prefixIcon: const Icon(Icons.person_outline, size: 20),
             ),
             validator: (val) {
               if (val == null || val.trim().isEmpty) return l10n.usernameErrorEmpty;
+              if (val.trim().length < 3) return 'Tối thiểu 3 ký tự';
               return null;
             },
           ),

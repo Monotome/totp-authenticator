@@ -1,11 +1,13 @@
-import jwt
+import re
 from typing import Annotated
 
-from fastapi import FastAPI, Depends, HTTPException, status
+import jwt
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import func
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
 
 from . import models, auth, database
 
@@ -26,8 +28,18 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 # --- Schemas ---
 class UserCreate(BaseModel):
-    username: str
-    password: str
+    username: str = Field(min_length=3, max_length=32)
+    password: str = Field(min_length=6, max_length=128)
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        clean = v.strip()
+        if len(clean) < 3:
+            raise ValueError("Username must be at least 3 characters long.")
+        if not re.match(r"^[a-zA-Z0-9_\-\.]+$", clean):
+            raise ValueError("Username can only contain letters, numbers, underscores, hyphens, and dots.")
+        return clean
 
 class SyncPayload(BaseModel):
     encrypted_payload: str
@@ -72,12 +84,15 @@ def health():
 
 @app.post("/register")
 def register(user: UserCreate, db: Session = Depends(database.get_db)) -> dict[str, str]:
-    db_user = db.query(models.User).filter(models.User.username == user.username).first()
+    clean_username = user.username.strip()
+    db_user = db.query(models.User).filter(
+        func.lower(models.User.username) == clean_username.lower()
+    ).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
 
     hashed_password = auth.get_password_hash(user.password)
-    new_user = models.User(username=user.username, hashed_password=hashed_password)
+    new_user = models.User(username=clean_username, hashed_password=hashed_password)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -91,7 +106,10 @@ def register(user: UserCreate, db: Session = Depends(database.get_db)) -> dict[s
 
 @app.post("/login")
 def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Session = Depends(database.get_db)) -> dict[str, str]:
-    user = db.query(models.User).filter(models.User.username == form_data.username).first()
+    clean_username = form_data.username.strip()
+    user = db.query(models.User).filter(
+        func.lower(models.User.username) == clean_username.lower()
+    ).first()
     if not user or not auth.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

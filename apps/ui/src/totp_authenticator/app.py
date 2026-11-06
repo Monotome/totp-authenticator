@@ -1,6 +1,7 @@
 """TOTP Authenticator UI — modern Windows 11 Fluent Tkinter desktop interface."""
 
 import math
+import re
 import time
 import tkinter as tk
 from datetime import datetime
@@ -392,6 +393,61 @@ class TOTPApp:
             cut_bbox = [cut_cx - cut_r, cut_cy - cut_r, cut_cx + cut_r, cut_cy + cut_r]
             d.ellipse(cut_bbox, fill=(0, 0, 0, 0))
 
+        elif name == "eye":
+            cx, cy = canvas_size / 2, canvas_size / 2
+            w = canvas_size * 0.44
+            h = canvas_size * 0.28
+            line_w = max(2, int(canvas_size * 0.07))
+            r_pupil = canvas_size * 0.12
+            d.ellipse(
+                [cx - r_pupil, cy - r_pupil, cx + r_pupil, cy + r_pupil],
+                fill=fill_rgba,
+            )
+            d.arc(
+                [cx - w, cy - h * 1.5, cx + w, cy + h * 0.8],
+                start=25,
+                end=155,
+                fill=fill_rgba,
+                width=line_w,
+            )
+            d.arc(
+                [cx - w, cy - h * 0.8, cx + w, cy + h * 1.5],
+                start=205,
+                end=335,
+                fill=fill_rgba,
+                width=line_w,
+            )
+
+        elif name == "eye_off":
+            cx, cy = canvas_size / 2, canvas_size / 2
+            w = canvas_size * 0.44
+            h = canvas_size * 0.28
+            line_w = max(2, int(canvas_size * 0.07))
+            r_pupil = canvas_size * 0.12
+            d.ellipse(
+                [cx - r_pupil, cy - r_pupil, cx + r_pupil, cy + r_pupil],
+                fill=fill_rgba,
+            )
+            d.arc(
+                [cx - w, cy - h * 1.5, cx + w, cy + h * 0.8],
+                start=25,
+                end=155,
+                fill=fill_rgba,
+                width=line_w,
+            )
+            d.arc(
+                [cx - w, cy - h * 0.8, cx + w, cy + h * 1.5],
+                start=205,
+                end=335,
+                fill=fill_rgba,
+                width=line_w,
+            )
+            d.line(
+                [(cx - w * 0.75, cy + h * 0.9), (cx + w * 0.75, cy - h * 0.9)],
+                fill=fill_rgba,
+                width=line_w + 1,
+            )
+
         resized = img.resize((size, size), Image.Resampling.LANCZOS)
         photo = ImageTk.PhotoImage(resized, master=self.root)
         self._icon_cache[key] = photo
@@ -403,8 +459,9 @@ class TOTPApp:
         width: int = 28,
         show: str = "",
         justify: str = "left",
+        has_toggle: bool = False,
     ) -> tuple[tk.Frame, tk.Entry]:
-        """Create a modern styled text entry with a 1px border and focus ring."""
+        """Modern styled text entry with a 1px border, focus ring, and optional eye toggle."""
         container = tk.Frame(parent, bg=self.c["border"], padx=1, pady=1)
         inner = tk.Frame(container, bg=self.c["bg_entry"])
         inner.pack(fill="both", expand=True)
@@ -422,7 +479,44 @@ class TOTPApp:
             show=show,
             justify=justify,
         )
-        entry.pack(fill="both", expand=True, padx=8, ipady=5)
+
+        if has_toggle:
+            entry.pack(side="left", fill="both", expand=True, padx=(8, 4), ipady=5)
+            is_visible = [show == ""]
+
+            btn_toggle = tk.Button(
+                inner,
+                relief="flat",
+                bd=0,
+                borderwidth=0,
+                highlightthickness=0,
+                bg=self.c["bg_entry"],
+                activebackground=self.c["bg_entry"],
+                cursor="hand2",
+                width=24,
+                height=24,
+            )
+
+            def _update_toggle_icon(is_hover: bool = False) -> None:
+                icon_col = self.c["fg"] if is_hover else self.c["fg_dim"]
+                icon_name = "eye" if is_visible[0] else "eye_off"
+                icon_photo = self._get_action_icon(icon_name, icon_col, size=15)
+                btn_toggle.configure(image=icon_photo)
+                btn_toggle._icon_photo = icon_photo  # Prevent garbage collection
+
+            def _on_toggle() -> None:
+                is_visible[0] = not is_visible[0]
+                entry.configure(show="" if is_visible[0] else "*")
+                _update_toggle_icon(is_hover=True)
+
+            btn_toggle.configure(command=_on_toggle)
+            btn_toggle.bind("<Enter>", lambda _e: _update_toggle_icon(True))
+            btn_toggle.bind("<Leave>", lambda _e: _update_toggle_icon(False))
+            _update_toggle_icon(False)
+            btn_toggle.pack(side="right", padx=(0, 6), pady=2)
+            entry._toggle_btn = btn_toggle  # type: ignore[attr-defined]
+        else:
+            entry.pack(fill="both", expand=True, padx=8, ipady=5)
 
         def _on_focus_in(_event: tk.Event = None) -> None:  # type: ignore[assignment]
             container.configure(bg=self.c["border_focus"])
@@ -551,44 +645,16 @@ class TOTPApp:
             justify="left",
         ).pack(anchor="w", pady=(4, 12))
 
-        input_row = tk.Frame(content, bg=self.c["bg"])
-        input_row.pack(fill="x", pady=(0, 16))
-
-        show_char = "*" if is_password else ""
         cnt, entry = self._create_modern_entry(
-            input_row,
+            content,
             width=28,
-            show=show_char,
+            show="*" if is_password else "",
+            has_toggle=is_password,
         )
-        cnt.pack(side="left", fill="x", expand=True)
+        cnt.pack(fill="x", pady=(0, 16))
         if initial_value:
             entry.insert(0, initial_value)
             entry.select_range(0, tk.END)
-
-        if is_password:
-            show_state = [False]
-
-            def _toggle_pwd() -> None:
-                show_state[0] = not show_state[0]
-                entry.configure(show="" if show_state[0] else "*")
-                btn_eye.configure(text="🙈" if show_state[0] else "👁️")
-
-            btn_eye = tk.Button(
-                input_row,
-                text="👁️",
-                font=("Segoe UI", 9),
-                bg=self.c["surface"],
-                fg=self.c["fg"],
-                activebackground=self.c["surface_hover"],
-                activeforeground=self.c["fg"],
-                relief="flat",
-                bd=0,
-                cursor="hand2",
-                padx=8,
-                pady=4,
-                command=_toggle_pwd,
-            )
-            btn_eye.pack(side="right", padx=(8, 0))
 
         result: list[str | None] = [None]
 
@@ -2136,35 +2202,10 @@ class TOTPApp:
                     fg=self.c["fg"],
                 ).pack(anchor="w", pady=(0, 2))
 
-                pwd_row = tk.Frame(body, bg=self.c["bg"])
-                pwd_row.pack(fill="x", pady=(0, 16))
-
-                pwd_cnt, pwd_entry = self._create_modern_entry(pwd_row, width=28, show="*")
-                pwd_cnt.pack(side="left", fill="x", expand=True)
-
-                pwd_visible = [False]
-
-                def _toggle_login_pwd() -> None:
-                    pwd_visible[0] = not pwd_visible[0]
-                    pwd_entry.configure(show="" if pwd_visible[0] else "*")
-                    btn_login_eye.configure(text="🙈" if pwd_visible[0] else "👁️")
-
-                btn_login_eye = tk.Button(
-                    pwd_row,
-                    text="👁️",
-                    font=("Segoe UI", 9),
-                    bg=self.c["surface"],
-                    fg=self.c["fg"],
-                    activebackground=self.c["surface_hover"],
-                    activeforeground=self.c["fg"],
-                    relief="flat",
-                    bd=0,
-                    cursor="hand2",
-                    padx=8,
-                    pady=4,
-                    command=_toggle_login_pwd,
+                pwd_cnt, pwd_entry = self._create_modern_entry(
+                    body, width=34, show="*", has_toggle=True
                 )
-                btn_login_eye.pack(side="right", padx=(6, 0))
+                pwd_cnt.pack(fill="x", pady=(0, 16))
 
                 def _auth(is_register: bool) -> None:
                     server_url = url_entry.get().strip().rstrip("/")
@@ -2173,13 +2214,37 @@ class TOTPApp:
                             "Error", "Please enter a valid Server URL.", parent=dialog
                         )
                         return
+                    if not (server_url.startswith("http://") or server_url.startswith("https://")):
+                        server_url = f"https://{server_url}"
                     self._settings.sync_server_url = server_url
 
                     u = user_entry.get().strip()
-                    p = pwd_entry.get().strip()
-                    if not u or not p:
+                    p = pwd_entry.get()
+                    if not u:
+                        messagebox.showerror("Error", "Please enter a username.", parent=dialog)
+                        return
+                    if len(u) < 3:
                         messagebox.showerror(
-                            "Error", "Please enter both Username and Password.", parent=dialog
+                            "Invalid Username",
+                            "Username must be at least 3 characters long.",
+                            parent=dialog,
+                        )
+                        return
+                    if not re.match(r"^[a-zA-Z0-9_\-\.]+$", u):
+                        messagebox.showerror(
+                            "Invalid Username",
+                            "Username can only contain letters, numbers, hyphens, and underscores.",
+                            parent=dialog,
+                        )
+                        return
+                    if not p:
+                        messagebox.showerror("Error", "Please enter a password.", parent=dialog)
+                        return
+                    if is_register and len(p) < 6:
+                        messagebox.showerror(
+                            "Password Too Short",
+                            "Password must be at least 6 characters long.",
+                            parent=dialog,
                         )
                         return
 

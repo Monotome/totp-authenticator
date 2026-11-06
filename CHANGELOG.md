@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- **Integrated Vector Password Visibility Toggle (`apps/ui`)**:
+  - Replaced disjointed external emoji button with an integrated, borderless vector eye button embedded directly inside the 1px focus-ring entry container.
+  - Implemented crisp anti-aliased PIL vector icons (`eye` and `eye_off`) with dynamic hover brightness states (`fg_dim` -> `fg`).
+  - Added support for `has_toggle=True` in `_create_modern_entry()`, harmonizing the entry border, padding, and focus ring.
+- **Client & Server-Side Cloud Registration Rules (`apps/ui`, `apps/api`)**:
+  - Enforced validation rules across Desktop and Server: username must be 3-32 characters (alphanumeric, underscores, hyphens) and password must be at least 6 characters.
+  - Added Pydantic v2 `field_validator` and regex constraints on `UserCreate` schema.
+  - Added case-insensitive username matching on API (`func.lower(User.username)`), allowing seamless cross-platform login regardless of mobile keyboard auto-capitalization.
+  - Preserved exact password characters without whitespace truncation.
+- **Mobile Input Auto-Capitalization Guard (`apps/mobile`)**:
+  - Disabled OS auto-capitalization (`TextCapitalization.none`) and autocorrect on username and server URL inputs in `SettingsScreen`.
+
 
 ## [v0.8.3] - 2026-11-06
 ### Added
