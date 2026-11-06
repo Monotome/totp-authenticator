@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Full Mobile Screen Localization**: Localized all mobile user interfaces, labels, dialogs, error messages, and bottom sheets across `HomeScreen`, `LockScreen`, `AddAccountScreen`, `ScanScreen`, `ScanConfirmSheet`, and `SyncPasswordDialog`.
   - **Test Coverage**: Added dedicated unit tests for `AppLocalizations` (`app_localizations_test.dart`), `ConfigProvider` (`config_provider_test.dart`), localized widget tests (`settings_screen_test.dart`, `sync_password_dialog_test.dart`), and updated visual golden tests (`golden_test.dart`).
 
+### Fixed
+- **Mobile Theme SegmentedButton Background Color (`apps/mobile`)**: Replaced default Material 3 green (`secondaryContainer`) background on active theme segments with the app's brand Sky Blue (`theme.colorScheme.primary` / `#38BDF8`), harmonizing `SegmentedButton` styling with Modern Slate design tokens in both dark and light modes.
+
 ## [v0.8.2] - 2026-11-06
 ### Added
 - **Mobile Modern Slate App Launcher Icons (`apps/mobile`)**:
