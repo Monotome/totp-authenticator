@@ -98,6 +98,18 @@ Whenever modifying or generating code, AI agents **MUST** strictly adhere to the
      * **`CHANGELOG.md`**: Record every user-facing addition, enhancement, bug fix, or breaking change under `[Unreleased]` according to Keep a Changelog standards (`Added`, `Changed`, `Fixed`, `Deprecated`, `Removed`, `Security`).
      * **`docs/`**: Update technical specifications, architecture docs, `ROADMAP.md`, `PROJECT_STRUCTURE.md`, or implementation notes in `docs/implementation/` whenever interfaces, data structures, APIs, or UX flows change.
      * Documentation must never be left stale, skipped, or postponed to a later date.
+9. **Critical Action Re-Authentication & Threat Modeling (Sudo Mode)**:
+   * **No Naked Credential or Vault Alterations**: Any operation altering security posture, credentials, or sensitive persistent data **MUST** strictly require re-authenticating with the current active Master Password before execution:
+     - Changing Master Password or Sync credentials.
+     - Disabling or removing vault encryption (`remove_encryption`).
+     - Exporting plaintext or encrypted backup archives.
+     - Deleting accounts or resetting the vault.
+   * **Adversary Mindset by Default**: AI agents must never code purely for the "happy-path". Always assume an attacker has momentary physical or remote access to an unlocked session. Critical actions must not succeed merely because an in-memory key exists; the user must actively prove knowledge of the current secret (`verify_password`).
+   * **Double Confirmation & Strength Validation**: Every password creation or change flow must enforce:
+     - Minimum length validation ($\ge 6$ characters).
+     - Confirmation matching input (`new_password == confirm_password`).
+     - Constant-time validation checks (`verify_password` / `hmac.compare_digest`).
+   * **Mandatory Negative & Abuse Test Coverage**: Every sensitive flow must be accompanied by automated negative tests asserting rejection of missing, incorrect, mismatched, or truncated passwords.
 
 ---
 
@@ -292,3 +304,4 @@ Before completing any user request or committing changes:
 5. **Skill Adherence**: Verify that changes adhere to the corresponding rules outlined in `.agents/skills/`.
 6. **Continuous & Incremental Commits**: Commit logical steps immediately during plan execution instead of waiting until the end to batch everything into a single massive commit.
 7. **Documentation Synchronized**: Verify that all new features, bug fixes, refactorings, or architectural changes are fully documented in `CHANGELOG.md` (under `[Unreleased]`) and relevant technical docs in `docs/` before finishing.
+8. **Security & Threat Model Audit (Sudo Mode & Negative Tests)**: Verify that all credential, encryption, or destructive actions strictly enforce current master password re-authentication (Sudo Mode), constant-time validation, minimum length $\ge 6$, password confirmation matching, and negative/abuse test cases asserting rejection of invalid attempts.

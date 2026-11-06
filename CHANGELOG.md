@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- **AI Agent Security Guardrails & Threat Modeling Mandate (`AGENTS.md`, `.agents/skills`)**:
+  - Enforced Inviolable Core Commandment #9 in `AGENTS.md`: Mandatory Critical Action Re-Authentication (Sudo Mode) across all sensitive flows (password changes, encryption removal, backup export, and vault deletion).
+  - Integrated Adversary Threat Modeling and negative/abuse automated test requirements into `python-cryptography-security`, `pytest-testing-patterns`, and `code-review` agent skills.
+  - Added Security & Threat Model Audit check to the pre-merge Agent Operational Checklist to prevent "happy-path only" blindspots in future coding agent tasks.
 - **Master Password Verification & Confirmation in Security Settings (`apps/ui`)**:
   - Required entering and verifying the **Current Master Password** before changing or removing vault password protection, eliminating the security vulnerability where an unlocked local session could alter or wipe encryption without knowing the current password.
   - Added dedicated modern inputs for **Current Master Password**, **New Master Password** (>= 6 characters minimum), and **Confirm New Password**, each featuring integrated vector eye toggles and focus ring borders.

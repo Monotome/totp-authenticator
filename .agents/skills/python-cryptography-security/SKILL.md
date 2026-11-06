@@ -103,10 +103,41 @@ def decrypt_payload(encrypted_blob: bytes, key: bytes, associated_data: bytes = 
 
 ---
 
-## 5. Security Checklist for Code Review
+## 5. Critical Action Re-Authentication (Sudo Mode) & Threat Modeling
 
-- [ ] Does any endpoint or logging call log the plaintext secret or password?
-- [ ] Is `hmac.compare_digest` used for comparing secrets or hashes?
-- [ ] Is a fresh random nonce (12 bytes) generated for *every* encryption?
-- [ ] Are exceptions caught gracefully without displaying stack traces that might leak secrets?
-- [ ] Are permissions on local config files restricted to current user (Windows ACLs / POSIX 0600)?
+In authenticator and password management applications, simply being in an "unlocked" state does **NOT** grant carte blanche permission to execute security-altering operations. 
+
+### Why Sudo Mode is Mandatory
+If a user leaves their computer unattended at an office or public space with TOTP Authenticator open, an opportunistic adversary or malicious process could:
+- Change the Master Password to lock out the legitimate owner.
+- Remove password protection, leaving all TOTP secrets unencrypted in plaintext on disk.
+- Export all 2FA accounts to an unencrypted or attacker-controlled backup file.
+
+### Required Invariants for Sensitive Operations:
+1. **Always Verify Current Credentials First**:
+   - When changing a password: must supply `old_password`, verify against disk/salt via `verify_password(old_password)` before calling `set_encryption(new_password)`.
+   - When disabling encryption: must prompt for `current_password` via secure modal, verify with `verify_password()`, and only then execute `remove_encryption()`.
+   - When exporting or restoring data: require dedicated passphrase entry.
+2. **Double Confirmation & Strength Constraints**:
+   - Enforce a minimum password length of $\ge 6$ characters (recommended $\ge 8$).
+   - Always require a "Confirm Password" field matching `new_password`.
+3. **Constant-Time Verification**:
+   - Re-authenticating must decrypt ciphertext or derive key and compare using constant-time digest comparison (`hmac.compare_digest`).
+4. **Adversary Threat Modeling Questions (Run before finalizing code)**:
+   - *Can this action be invoked without re-authenticating the current user?*
+   - *What happens if the current password is empty, incorrect, or mismatched? Does it abort immediately without partial state changes?*
+   - *Is the plaintext secret exposed in any alert, toast, or exception message?*
+   - *Are negative/abuse unit tests written asserting that unauthorized requests fail?*
+
+---
+
+## 6. Security Checklist for Code Review
+
+- [ ] **Sudo Mode / Re-Authentication**: Does any password change, encryption removal, or vault reset require entering and verifying the current master password?
+- [ ] **Strength & Confirmation**: Are new passwords verified for minimum length ($\ge 6$ chars) and double-checked against a confirmation field?
+- [ ] **No Secret Leaks**: Does any endpoint, dialog, or logging call leak Base32 secrets, raw passwords, or derived encryption keys?
+- [ ] **Timing Attack Immunity**: Is `hmac.compare_digest` or `verify_password` used for comparing secrets, tokens, or hashes?
+- [ ] **Cryptographic Rigor**: Is a fresh random nonce (12 bytes, `os.urandom(12)`) generated for *every* encryption operation? Nonce reuse is strictly prohibited.
+- [ ] **Graceful Exception Handling**: Are cryptography exceptions (`InvalidTag`, `InvalidPasswordError`) caught without leaking stack traces or raw payloads?
+- [ ] **Storage Isolation & Permissions**: Are permissions on local config files restricted to the current user (Windows ACLs / POSIX 0600) and isolated with `tmp_path` in all tests?
+- [ ] **Negative & Abuse Tests**: Are automated tests written asserting rejection of invalid/missing current passwords, mismatched passwords, and short passwords?
