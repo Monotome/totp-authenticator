@@ -253,6 +253,19 @@ void main() {
       expect(find.text('Account Password'), findsOneWidget);
       expect(find.text('Log In'), findsOneWidget);
 
+      // Tap 'Log In' without inputs to test validation error localization
+      await tester.tap(find.text('Log In'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Please enter username'), findsOneWidget);
+      expect(find.text('Please enter password'), findsOneWidget);
+
+      // Scroll down to check biometrics title in English
+      await tester.drag(find.byType(ListView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Lock with Fingerprint'), findsOneWidget);
+
       syncProvider.dispose();
     });
 

@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Mobile Theme SegmentedButton Background Color (`apps/mobile`)**: Replaced default Material 3 green (`secondaryContainer`) background on active theme segments with the app's brand Sky Blue (`theme.colorScheme.primary` / `#38BDF8`), harmonizing `SegmentedButton` styling with Modern Slate design tokens in both dark and light modes.
+- **Mobile Dual-Language Input Validations & Biometrics Localization (`apps/mobile`)**:
+  - Localized form validation errors in `SettingsScreen` (server URL, username, password length) and `SyncPasswordDialog` (empty encryption password) to dynamically match active language preference.
+  - Localized biometric and device credential display names via `l10n.getBiometricName` (`Face ID`, `Fingerprint`, `Iris Recognition`, `Device Passcode / PIN`), eliminating mixed Vietnamese/English text (`Lock with Mã PIN / Mật khẩu máy`).
+  - Localized sync action feedback SnackBars, relative timestamps (`Never synced`), Keystore persistence toggle, and divider text.
 
 ## [v0.8.2] - 2026-11-06
 ### Added

@@ -68,8 +68,8 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
     final theme = Theme.of(context);
     final security = context.watch<SecurityProvider>();
     final isAuthenticating = security.isAuthenticating;
-    final biometricName = security.biometricDisplayName;
     final l10n = context.l10n;
+    final biometricName = l10n.getBiometricName(security.availableBiometrics);
 
     return Scaffold(
       body: SafeArea(

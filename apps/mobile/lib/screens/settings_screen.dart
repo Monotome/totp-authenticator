@@ -68,9 +68,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await syncProvider.syncNow(accountProvider, password);
       if (mounted) {
+        final l10n = context.l10n;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(syncProvider.successMessage ?? 'Đồng bộ hai chiều thành công!'),
+            content: Text(syncProvider.successMessage ?? l10n.syncSuccessMessage),
             backgroundColor: Colors.green.shade700,
             behavior: SnackBarBehavior.floating,
           ),
@@ -80,7 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Lỗi đồng bộ: $e'),
+            content: Text('${context.l10n.error}: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -99,9 +100,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await syncProvider.pull(accountProvider, password);
       if (mounted) {
+        final l10n = context.l10n;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(syncProvider.successMessage ?? 'Kéo dữ liệu thành công!'),
+            content: Text(syncProvider.successMessage ?? l10n.pullSuccessMessage),
             backgroundColor: Colors.green.shade700,
             behavior: SnackBarBehavior.floating,
           ),
@@ -111,7 +113,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Lỗi kéo dữ liệu: $e'),
+            content: Text('${context.l10n.error}: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -130,9 +132,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await syncProvider.push(accountProvider, password);
       if (mounted) {
+        final l10n = context.l10n;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(syncProvider.successMessage ?? 'Đẩy dữ liệu thành công!'),
+            content: Text(syncProvider.successMessage ?? l10n.pushSuccessMessage),
             backgroundColor: Colors.green.shade700,
             behavior: SnackBarBehavior.floating,
           ),
@@ -142,7 +145,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Lỗi đẩy dữ liệu: $e'),
+            content: Text('${context.l10n.error}: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -163,9 +166,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (_isRegisterMode) {
         await syncProvider.register(url, user, pass);
         if (mounted) {
+          final l10n = context.l10n;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(syncProvider.successMessage ?? 'Đăng ký thành công! Vui lòng đăng nhập.'),
+              content: Text(syncProvider.successMessage ?? l10n.registerSuccessMessage),
               backgroundColor: Colors.green.shade700,
               behavior: SnackBarBehavior.floating,
             ),
@@ -177,9 +181,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       } else {
         await syncProvider.login(url, user, pass);
         if (mounted) {
+          final l10n = context.l10n;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(syncProvider.successMessage ?? 'Đăng nhập thành công!'),
+              content: Text(syncProvider.successMessage ?? l10n.loginSuccessMessage),
               backgroundColor: Colors.green.shade700,
               behavior: SnackBarBehavior.floating,
             ),
@@ -199,8 +204,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  String _formatTimestamp(double timestamp) {
-    if (timestamp <= 0.0) return 'Chưa đồng bộ';
+  String _formatTimestamp(double timestamp, AppLocalizations l10n) {
+    if (timestamp <= 0.0) return l10n.neverSynced;
     final dt = DateTime.fromMillisecondsSinceEpoch((timestamp * 1000).toInt());
     return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} '
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}:${dt.second.toString().padLeft(2, '0')}';
@@ -349,7 +354,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const Divider(height: 18),
               _buildDetailRow(l10n.serverUrlLabel, syncProvider.serverUrl, Icons.dns_outlined, theme),
               const Divider(height: 18),
-              _buildDetailRow('Đồng bộ gần nhất', _formatTimestamp(syncProvider.lastSyncedAt), Icons.access_time_outlined, theme),
+              _buildDetailRow(l10n.lastSyncLabel, _formatTimestamp(syncProvider.lastSyncedAt, l10n), Icons.access_time_outlined, theme),
             ],
           ),
         ),
@@ -367,7 +372,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 )
               : const Icon(Icons.sync, size: 20),
           label: Text(
-            isSyncing ? 'Đang đồng bộ...' : l10n.syncNowButton,
+            isSyncing ? l10n.syncingStatus : l10n.syncNowButton,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           style: FilledButton.styleFrom(
@@ -422,9 +427,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Ghi nhớ mật khẩu E2EE', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  Text(l10n.rememberPasswordTitle, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                   Text(
-                    syncProvider.rememberPassword ? 'Đã lưu an toàn trong Keystore' : 'Hỏi mật khẩu mỗi lần đồng bộ',
+                    syncProvider.rememberPassword ? l10n.rememberPasswordSaved : l10n.rememberPasswordPrompt,
                     style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                   ),
                 ],
@@ -436,11 +441,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   await syncProvider.setRememberPassword(false, null);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Đã xóa mật khẩu E2EE khỏi bộ nhớ bảo mật.')),
+                      SnackBar(content: Text(l10n.forgetPasswordSuccess)),
                     );
                   }
                 },
-                child: const Text('Xóa', style: TextStyle(fontSize: 12)),
+                child: Text(l10n.delete, style: const TextStyle(fontSize: 12)),
               ),
           ],
         ),
@@ -498,7 +503,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               prefixIcon: const Icon(Icons.dns_outlined, size: 20),
             ),
             validator: (val) {
-              if (val == null || val.trim().isEmpty) return 'Vui lòng nhập địa chỉ máy chủ';
+              if (val == null || val.trim().isEmpty) return l10n.serverUrlErrorEmpty;
               return null;
             },
           ),
@@ -544,7 +549,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               prefixIcon: const Icon(Icons.person_outline, size: 20),
             ),
             validator: (val) {
-              if (val == null || val.trim().isEmpty) return 'Vui lòng nhập tên người dùng';
+              if (val == null || val.trim().isEmpty) return l10n.usernameErrorEmpty;
               return null;
             },
           ),
@@ -571,8 +576,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             validator: (val) {
-              if (val == null || val.isEmpty) return 'Vui lòng nhập mật khẩu';
-              if (_isRegisterMode && val.length < 6) return 'Mật khẩu phải từ 6 ký tự trở lên';
+              if (val == null || val.isEmpty) return l10n.passwordErrorEmpty;
+              if (_isRegisterMode && val.length < 6) return l10n.passwordErrorMinLength;
               return null;
             },
           ),
@@ -686,7 +691,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildSecurityCard(BuildContext context, ThemeData theme, SecurityProvider security, AppLocalizations l10n) {
     final isSupported = security.isDeviceSupported;
     final isEnabled = security.isBiometricEnabled;
-    final biometricName = security.biometricDisplayName;
+    final biometricName = l10n.getBiometricName(security.availableBiometrics);
 
     return Card(
       elevation: 0,

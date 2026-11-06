@@ -37,7 +37,14 @@ class BiometricService {
   }
 
   /// Friendly display name for the available biometric type.
-  String getBiometricDisplayName(List<BiometricType> types) {
+  String getBiometricDisplayName(List<BiometricType> types, {String? languageCode}) {
+    if (languageCode == 'en') {
+      if (types.contains(BiometricType.face)) return 'Face ID / Facial Recognition';
+      if (types.contains(BiometricType.fingerprint)) return 'Fingerprint';
+      if (types.contains(BiometricType.iris)) return 'Iris Recognition';
+      if (types.isNotEmpty) return 'Biometrics';
+      return 'Device Passcode / PIN';
+    }
     if (types.contains(BiometricType.face)) {
       return 'Khuôn mặt (Face ID)';
     } else if (types.contains(BiometricType.fingerprint)) {

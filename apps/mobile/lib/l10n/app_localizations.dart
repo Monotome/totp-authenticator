@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:local_auth/local_auth.dart';
 
 /// AppLocalizations provides compile-time safe, typed translations for Vietnamese and English.
 abstract class AppLocalizations {
@@ -108,6 +109,15 @@ abstract class AppLocalizations {
   String get pullButton;
   String get pushButton;
   String get logoutButton;
+  String get lastSyncLabel;
+  String get syncingStatus;
+  String get rememberPasswordTitle;
+  String get rememberPasswordSaved;
+  String get rememberPasswordPrompt;
+  String get forgetPasswordSuccess;
+  String get syncSuccessMessage;
+  String get pullSuccessMessage;
+  String get pushSuccessMessage;
 
   // Section 2: Security & Biometrics
   String get securitySectionTitle;
@@ -147,6 +157,28 @@ abstract class AppLocalizations {
   String get vaultPasswordTitle;
   String get vaultPasswordDescription;
   String get vaultPasswordLabel;
+  String get vaultPasswordErrorEmpty;
+  String get rememberOnDevice;
+
+  // ── Form Validations & Cloud Sync Status ──
+  String get serverUrlErrorEmpty;
+  String get usernameErrorEmpty;
+  String get passwordErrorEmpty;
+  String get passwordErrorMinLength;
+  String get registerSuccessMessage;
+  String get loginSuccessMessage;
+  String get neverSynced;
+
+  // ── Biometrics & Credentials ──
+  String get biometricFace;
+  String get biometricFingerprint;
+  String get biometricIris;
+  String get biometricGeneric;
+  String get biometricPinPasscode;
+  String getBiometricName(List<BiometricType> types);
+
+  // ── Misc ──
+  String get orDivider;
 }
 
 /// Vietnamese translations.
@@ -306,6 +338,25 @@ class _AppLocalizationsVi implements AppLocalizations {
   String get pushButton => 'Đẩy lên (Push)';
   @override
   String get logoutButton => 'Đăng xuất';
+  @override
+  String get lastSyncLabel => 'Đồng bộ gần nhất';
+  @override
+  String get syncingStatus => 'Đang đồng bộ...';
+  @override
+  String get rememberPasswordTitle => 'Ghi nhớ mật khẩu E2EE';
+  @override
+  String get rememberPasswordSaved => 'Đã lưu an toàn trong Keystore';
+  @override
+  String get rememberPasswordPrompt => 'Hỏi mật khẩu mỗi lần đồng bộ';
+  @override
+  String get forgetPasswordSuccess =>
+      'Đã xóa mật khẩu E2EE khỏi bộ nhớ bảo mật.';
+  @override
+  String get syncSuccessMessage => 'Đồng bộ hai chiều thành công!';
+  @override
+  String get pullSuccessMessage => 'Kéo dữ liệu thành công!';
+  @override
+  String get pushSuccessMessage => 'Đẩy dữ liệu thành công!';
 
   @override
   String get securitySectionTitle => 'BẢO MẬT & SINH TRẮC HỌC';
@@ -376,6 +427,50 @@ class _AppLocalizationsVi implements AppLocalizations {
       'Mật khẩu này được sử dụng để dẫn xuất khóa AES-256 mã hóa/giải mã toàn bộ tài khoản 2FA của bạn.';
   @override
   String get vaultPasswordLabel => 'Mật khẩu mã hóa';
+  @override
+  String get vaultPasswordErrorEmpty => 'Vui lòng nhập mật khẩu mã hóa.';
+  @override
+  String get rememberOnDevice =>
+      'Ghi nhớ trên thiết bị này (lưu trong Keystore)';
+
+  @override
+  String get serverUrlErrorEmpty => 'Vui lòng nhập địa chỉ máy chủ';
+  @override
+  String get usernameErrorEmpty => 'Vui lòng nhập tên người dùng';
+  @override
+  String get passwordErrorEmpty => 'Vui lòng nhập mật khẩu';
+  @override
+  String get passwordErrorMinLength => 'Mật khẩu phải từ 6 ký tự trở lên';
+  @override
+  String get registerSuccessMessage =>
+      'Đăng ký thành công! Vui lòng đăng nhập.';
+  @override
+  String get loginSuccessMessage => 'Đăng nhập thành công!';
+  @override
+  String get neverSynced => 'Chưa đồng bộ';
+
+  @override
+  String get biometricFace => 'Khuôn mặt (Face ID)';
+  @override
+  String get biometricFingerprint => 'Vân tay (Fingerprint)';
+  @override
+  String get biometricIris => 'Mống mắt (Iris)';
+  @override
+  String get biometricGeneric => 'Sinh trắc học';
+  @override
+  String get biometricPinPasscode => 'Mã PIN / Mật khẩu máy';
+
+  @override
+  String getBiometricName(List<BiometricType> types) {
+    if (types.contains(BiometricType.face)) return biometricFace;
+    if (types.contains(BiometricType.fingerprint)) return biometricFingerprint;
+    if (types.contains(BiometricType.iris)) return biometricIris;
+    if (types.isNotEmpty) return biometricGeneric;
+    return biometricPinPasscode;
+  }
+
+  @override
+  String get orDivider => 'hoặc';
 }
 
 /// English translations.
@@ -534,6 +629,25 @@ class _AppLocalizationsEn implements AppLocalizations {
   String get pushButton => 'Push';
   @override
   String get logoutButton => 'Log Out';
+  @override
+  String get lastSyncLabel => 'Last Synced';
+  @override
+  String get syncingStatus => 'Syncing...';
+  @override
+  String get rememberPasswordTitle => 'Remember E2EE Password';
+  @override
+  String get rememberPasswordSaved => 'Securely saved in Keystore';
+  @override
+  String get rememberPasswordPrompt => 'Prompt password on each sync';
+  @override
+  String get forgetPasswordSuccess =>
+      'Removed E2EE password from secure storage.';
+  @override
+  String get syncSuccessMessage => 'Two-way sync completed successfully!';
+  @override
+  String get pullSuccessMessage => 'Pull completed successfully!';
+  @override
+  String get pushSuccessMessage => 'Push completed successfully!';
 
   @override
   String get securitySectionTitle => 'SECURITY & BIOMETRICS';
@@ -604,6 +718,50 @@ class _AppLocalizationsEn implements AppLocalizations {
       'This password derives the AES-256 key used to encrypt/decrypt all your 2FA accounts.';
   @override
   String get vaultPasswordLabel => 'Encryption Password';
+  @override
+  String get vaultPasswordErrorEmpty => 'Please enter encryption password.';
+  @override
+  String get rememberOnDevice =>
+      'Remember on this device (secure Keystore)';
+
+  @override
+  String get serverUrlErrorEmpty => 'Please enter server URL';
+  @override
+  String get usernameErrorEmpty => 'Please enter username';
+  @override
+  String get passwordErrorEmpty => 'Please enter password';
+  @override
+  String get passwordErrorMinLength => 'Password must be at least 6 characters';
+  @override
+  String get registerSuccessMessage =>
+      'Registration successful! Please log in.';
+  @override
+  String get loginSuccessMessage => 'Login successful!';
+  @override
+  String get neverSynced => 'Never synced';
+
+  @override
+  String get biometricFace => 'Face ID / Facial Recognition';
+  @override
+  String get biometricFingerprint => 'Fingerprint';
+  @override
+  String get biometricIris => 'Iris Recognition';
+  @override
+  String get biometricGeneric => 'Biometrics';
+  @override
+  String get biometricPinPasscode => 'Device Passcode / PIN';
+
+  @override
+  String getBiometricName(List<BiometricType> types) {
+    if (types.contains(BiometricType.face)) return biometricFace;
+    if (types.contains(BiometricType.fingerprint)) return biometricFingerprint;
+    if (types.contains(BiometricType.iris)) return biometricIris;
+    if (types.isNotEmpty) return biometricGeneric;
+    return biometricPinPasscode;
+  }
+
+  @override
+  String get orDivider => 'or';
 }
 
 /// Localizations delegate that integrates with MaterialApp.

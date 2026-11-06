@@ -204,7 +204,7 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: Text(
-                        'hoặc / or',
+                        l10n.orDivider,
                         style: TextStyle(
                           color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                           fontSize: 12,

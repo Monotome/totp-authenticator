@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:totp_authenticator/l10n/app_localizations.dart';
 
 void main() {
@@ -32,6 +33,30 @@ void main() {
 
       expect(vi.languageVi, 'Tiếng Việt 🇻🇳');
       expect(en.languageEn, 'English 🇬🇧');
+
+      // Validation errors
+      expect(vi.usernameErrorEmpty, 'Vui lòng nhập tên người dùng');
+      expect(en.usernameErrorEmpty, 'Please enter username');
+
+      expect(vi.passwordErrorEmpty, 'Vui lòng nhập mật khẩu');
+      expect(en.passwordErrorEmpty, 'Please enter password');
+
+      expect(vi.serverUrlErrorEmpty, 'Vui lòng nhập địa chỉ máy chủ');
+      expect(en.serverUrlErrorEmpty, 'Please enter server URL');
+
+      // Biometrics
+      expect(vi.getBiometricName([BiometricType.fingerprint]), 'Vân tay (Fingerprint)');
+      expect(en.getBiometricName([BiometricType.fingerprint]), 'Fingerprint');
+
+      expect(vi.getBiometricName([]), 'Mã PIN / Mật khẩu máy');
+      expect(en.getBiometricName([]), 'Device Passcode / PIN');
+
+      expect(vi.getBiometricName([BiometricType.face]), 'Khuôn mặt (Face ID)');
+      expect(en.getBiometricName([BiometricType.face]), 'Face ID / Facial Recognition');
+
+      // Sync password dialog
+      expect(vi.rememberOnDevice, 'Ghi nhớ trên thiết bị này (lưu trong Keystore)');
+      expect(en.rememberOnDevice, 'Remember on this device (secure Keystore)');
     });
 
     test('dynamic parameterized getters work correctly in both languages', () {

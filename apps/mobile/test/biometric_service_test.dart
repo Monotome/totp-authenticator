@@ -85,6 +85,13 @@ void main() {
       expect(service.getBiometricDisplayName([BiometricType.iris]), equals('Mống mắt (Iris)'));
       expect(service.getBiometricDisplayName([BiometricType.weak]), equals('Sinh trắc học'));
       expect(service.getBiometricDisplayName([]), equals('Mã PIN / Mật khẩu máy'));
+
+      // English
+      expect(service.getBiometricDisplayName([BiometricType.face], languageCode: 'en'), equals('Face ID / Facial Recognition'));
+      expect(service.getBiometricDisplayName([BiometricType.fingerprint], languageCode: 'en'), equals('Fingerprint'));
+      expect(service.getBiometricDisplayName([BiometricType.iris], languageCode: 'en'), equals('Iris Recognition'));
+      expect(service.getBiometricDisplayName([BiometricType.weak], languageCode: 'en'), equals('Biometrics'));
+      expect(service.getBiometricDisplayName([], languageCode: 'en'), equals('Device Passcode / PIN'));
     });
 
     test('authenticate returns true when native verification succeeds', () async {
