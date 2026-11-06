@@ -3,7 +3,8 @@
 import math
 import time
 import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog
+from datetime import datetime
+from tkinter import filedialog, messagebox
 
 import pyperclip
 from PIL import Image, ImageDraw, ImageTk
@@ -495,6 +496,154 @@ class TOTPApp:
         btn.bind("<Enter>", _on_enter)
         btn.bind("<Leave>", _on_leave)
         return btn
+
+    def _prompt_text(
+        self,
+        title: str,
+        prompt: str,
+        initial_value: str = "",
+        is_password: bool = False,
+        parent: tk.Widget | None = None,
+        confirm_text: str = "Confirm",
+    ) -> str | None:
+        """Modern Slate modal prompt replacing retro Tk simpledialog."""
+        parent_widget = parent or self.root
+        dialog = tk.Toplevel(parent_widget)
+        dialog.title(title)
+        dialog.geometry("380x210")
+        dialog.configure(bg=self.c["bg"])
+        dialog.resizable(False, False)
+        dialog.transient(parent_widget)
+        dialog.grab_set()
+
+        try:
+            parent_widget.update_idletasks()
+            pw = parent_widget.winfo_width()
+            ph = parent_widget.winfo_height()
+            px = parent_widget.winfo_rootx()
+            py = parent_widget.winfo_rooty()
+            dw, dh = 380, 210
+            x = px + max(0, (pw - dw) // 2)
+            y = py + max(0, (ph - dh) // 2)
+            dialog.geometry(f"{dw}x{dh}+{x}+{y}")
+        except Exception:
+            pass
+
+        content = tk.Frame(dialog, bg=self.c["bg"], padx=20, pady=16)
+        content.pack(fill="both", expand=True)
+
+        icon_str = "🔐" if is_password else "✏️"
+        tk.Label(
+            content,
+            text=f"{icon_str}  {title}",
+            font=("Segoe UI", 11, "bold"),
+            bg=self.c["bg"],
+            fg=self.c["fg"],
+        ).pack(anchor="w")
+
+        tk.Label(
+            content,
+            text=prompt,
+            font=("Segoe UI", 9),
+            bg=self.c["bg"],
+            fg=self.c["fg_dim"],
+            wraplength=340,
+            justify="left",
+        ).pack(anchor="w", pady=(4, 12))
+
+        input_row = tk.Frame(content, bg=self.c["bg"])
+        input_row.pack(fill="x", pady=(0, 16))
+
+        show_char = "*" if is_password else ""
+        cnt, entry = self._create_modern_entry(
+            input_row,
+            width=28,
+            show=show_char,
+        )
+        cnt.pack(side="left", fill="x", expand=True)
+        if initial_value:
+            entry.insert(0, initial_value)
+            entry.select_range(0, tk.END)
+
+        if is_password:
+            show_state = [False]
+
+            def _toggle_pwd() -> None:
+                show_state[0] = not show_state[0]
+                entry.configure(show="" if show_state[0] else "*")
+                btn_eye.configure(text="🙈" if show_state[0] else "👁️")
+
+            btn_eye = tk.Button(
+                input_row,
+                text="👁️",
+                font=("Segoe UI", 9),
+                bg=self.c["surface"],
+                fg=self.c["fg"],
+                activebackground=self.c["surface_hover"],
+                activeforeground=self.c["fg"],
+                relief="flat",
+                bd=0,
+                cursor="hand2",
+                padx=8,
+                pady=4,
+                command=_toggle_pwd,
+            )
+            btn_eye.pack(side="right", padx=(8, 0))
+
+        result: list[str | None] = [None]
+
+        def _on_ok() -> None:
+            val = entry.get()
+            result[0] = val
+            dialog.destroy()
+
+        def _on_cancel() -> None:
+            dialog.destroy()
+
+        btn_row = tk.Frame(content, bg=self.c["bg"])
+        btn_row.pack(fill="x")
+
+        btn_confirm = self._create_pill_button(
+            btn_row,
+            text=confirm_text,
+            command=_on_ok,
+            is_primary=True,
+            padx=18,
+            pady=5,
+        )
+        btn_confirm.pack(side="right")
+
+        btn_cancel = self._create_pill_button(
+            btn_row,
+            text="Cancel",
+            command=_on_cancel,
+            padx=14,
+            pady=5,
+        )
+        btn_cancel.pack(side="right", padx=(0, 8))
+
+        dialog.bind("<Return>", lambda _e: _on_ok())
+        dialog.bind("<Escape>", lambda _e: _on_cancel())
+
+        entry.focus_set()
+        parent_widget.wait_window(dialog)
+        return result[0]
+
+    def _prompt_password(
+        self,
+        title: str,
+        prompt: str,
+        parent: tk.Widget | None = None,
+        confirm_text: str = "Confirm",
+    ) -> str | None:
+        """Modern modal password prompt."""
+        return self._prompt_text(
+            title=title,
+            prompt=prompt,
+            is_password=True,
+            parent=parent,
+            confirm_text=confirm_text,
+        )
 
     def _create_icon_button(
         self,
@@ -1132,15 +1281,15 @@ class TOTPApp:
         dialog.bind("<Return>", lambda e: _save())
 
     def _open_rename_dialog(self) -> None:
-        """Open a simple dialog to rename the selected account."""
+        """Open a modern dialog to rename the selected account."""
         account = self._selected_account()
         if not account:
             messagebox.showinfo("Info", "Please select an account first.")
             return
-        new_name = simpledialog.askstring(
-            "Rename Account",
-            f'New name for "{account.name}":',
-            initialvalue=account.name,
+        new_name = self._prompt_text(
+            title="Rename Account",
+            prompt=f'Enter new name for "{account.name}":',
+            initial_value=account.name,
             parent=self.root,
         )
         if new_name and new_name.strip():
@@ -1562,10 +1711,9 @@ class TOTPApp:
             )
             if not path:
                 return
-            pwd = simpledialog.askstring(
+            pwd = self._prompt_password(
                 "Backup Password",
-                "Create a password to encrypt this backup:",
-                show="*",
+                "Create a strong password to encrypt this backup archive:",
                 parent=dialog,
             )
             if not pwd:
@@ -1587,10 +1735,9 @@ class TOTPApp:
             )
             if not path:
                 return
-            pwd = simpledialog.askstring(
+            pwd = self._prompt_password(
                 "Backup Password",
-                "Enter the password for this backup:",
-                show="*",
+                "Enter the decryption password for this backup file:",
                 parent=dialog,
             )
             if not pwd:
@@ -1626,25 +1773,38 @@ class TOTPApp:
         """Open the modernized Cloud Sync dialog."""
         dialog = tk.Toplevel(self.root)
         dialog.title("Cloud Sync")
-        dialog.geometry("420x440")
+        dialog.geometry("450x510")
         dialog.configure(bg=self.c["bg"])
         dialog.resizable(False, False)
         dialog.grab_set()
-        dialog.attributes("-topmost", True)
+        dialog.transient(self.root)
+
+        try:
+            dialog.update_idletasks()
+            pw = self.root.winfo_width()
+            ph = self.root.winfo_height()
+            px = self.root.winfo_rootx()
+            py = self.root.winfo_rooty()
+            dw, dh = 450, 510
+            x = px + max(0, (pw - dw) // 2)
+            y = py + max(0, (ph - dh) // 2)
+            dialog.geometry(f"{dw}x{dh}+{x}+{y}")
+        except Exception:
+            pass
 
         header = tk.Frame(dialog, bg=self.c["bg"])
         header.pack(fill="x", padx=24, pady=(20, 14))
 
         tk.Label(
             header,
-            text="☁️ Cloud Synchronization",
+            text="☁️  Cloud Synchronization",
             font=("Segoe UI", 12, "bold"),
             bg=self.c["bg"],
             fg=self.c["fg"],
         ).pack(anchor="w")
         tk.Label(
             header,
-            text="End-to-End Encrypted backup and sync across devices",
+            text="End-to-End Encrypted (Zero-Knowledge) cross-device sync",
             font=("Segoe UI", 9),
             bg=self.c["bg"],
             fg=self.c["fg_dim"],
@@ -1667,123 +1827,294 @@ class TOTPApp:
                 w.destroy()
 
             if self._settings.sync_token:
-                # Connected status card
+                # ── Connected Status Card ─────────────────────────────────
                 status_card = tk.Frame(
                     body,
                     bg=self.c["bg_card"],
                     padx=16,
-                    pady=16,
+                    pady=14,
                     highlightbackground=self.c["border"],
                     highlightthickness=1,
                 )
-                status_card.pack(fill="x", pady=10)
+                status_card.pack(fill="x", pady=(0, 16))
 
-                tk.Label(
-                    status_card,
-                    text="● Connected to Sync Server",
+                top_row = tk.Frame(status_card, bg=self.c["bg_card"])
+                top_row.pack(fill="x")
+
+                lbl_status = tk.Label(
+                    top_row,
+                    text="● Connected to Server",
                     font=("Segoe UI", 10, "bold"),
                     bg=self.c["bg_card"],
                     fg=self.c["green"],
-                ).pack(anchor="w")
+                )
+                lbl_status.pack(side="left")
 
-                tk.Label(
+                if self._settings.sync_username:
+                    lbl_user = tk.Label(
+                        top_row,
+                        text=f"👤 {self._settings.sync_username}",
+                        font=("Segoe UI", 9, "bold"),
+                        bg=self.c["bg_card"],
+                        fg=self.c["fg"],
+                    )
+                    lbl_user.pack(side="right")
+
+                lbl_server = tk.Label(
                     status_card,
-                    text=f"Server: {self._settings.sync_server_url}",
+                    text=f"🌐 {self._settings.sync_server_url}",
                     font=("Segoe UI", 8),
                     bg=self.c["bg_card"],
                     fg=self.c["fg_dim"],
-                ).pack(anchor="w", pady=(4, 0))
+                    wraplength=390,
+                    justify="left",
+                )
+                lbl_server.pack(anchor="w", pady=(6, 2))
 
-                def _do_sync(action: str) -> None:
-                    pwd = simpledialog.askstring(
+                if self._settings.last_synced_at > 0:
+                    dt = datetime.fromtimestamp(self._settings.last_synced_at)
+                    last_sync_text = dt.strftime("%b %d, %Y  %H:%M:%S")
+                else:
+                    last_sync_text = "Not synced yet"
+                lbl_last_sync = tk.Label(
+                    status_card,
+                    text=f"⏱️ Last Synced: {last_sync_text}",
+                    font=("Segoe UI", 8),
+                    bg=self.c["bg_card"],
+                    fg=self.c["fg_dim"],
+                )
+                lbl_last_sync.pack(anchor="w", pady=(2, 0))
+
+                # ── Primary 2-Way Sync Hero Action ────────────────────────
+                sync_hero_frame = tk.Frame(body, bg=self.c["bg"])
+                sync_hero_frame.pack(fill="x", pady=(0, 14))
+
+                def _get_sync_password() -> str | None:
+                    return self._prompt_password(
                         "Vault Password",
-                        "Enter Master/Sync password to encrypt/decrypt cloud vault:",
-                        show="*",
+                        "Enter Master/Sync password to encrypt & decrypt cloud vault:",
                         parent=dialog,
                     )
+
+                def _handle_conflict(manager: SyncManager) -> None:
+                    msg = (
+                        "Cloud vault was modified by another device with a newer timestamp.\n\n"
+                        "Do you want to force overwrite cloud data with your local vault?"
+                    )
+                    if messagebox.askyesno("Conflict Detected", msg, parent=dialog):
+                        try:
+                            ts = manager.resolve_conflict_overwrite(self._current_key)
+                            self._settings.last_synced_at = float(ts)
+                            save_settings(self._settings)
+                            _refresh_ui()
+                            messagebox.showinfo(
+                                "Success", "Cloud vault overwritten successfully!", parent=dialog
+                            )
+                        except Exception as e:
+                            messagebox.showerror("Error", str(e), parent=dialog)
+
+                def _sync_now() -> None:
+                    pwd = _get_sync_password()
                     if not pwd:
                         return
-
                     manager = SyncManager(self._settings, pwd)
                     try:
-                        if action == "push":
-                            manager.push(self._current_key)
-                            messagebox.showinfo(
-                                "Success", "Vault uploaded successfully!", parent=dialog
-                            )
-                        elif action == "pull":
-                            count = manager.pull(self._current_key)
-                            self._accounts = load_accounts(self._current_key)
-                            self._refresh_sidebar()
-                            messagebox.showinfo(
-                                "Success",
-                                f"Vault synchronized! Added {count} new accounts.",
-                                parent=dialog,
-                            )
-                    except ConflictError:
+                        res = manager.sync_now(self._current_key)
+                        self._accounts = load_accounts(self._current_key)
+                        self._refresh_sidebar()
+                        self._settings.last_synced_at = float(res["last_updated"])
+                        save_settings(self._settings)
+                        _refresh_ui()
                         msg = (
-                            "Cloud vault was modified by another device.\n"
-                            "Do you want to force overwrite cloud data?"
+                            "2-Way Sync completed successfully!\n\n"
+                            f"Merged {res['added']} new account(s)."
                         )
-                        if messagebox.askyesno("Conflict Detected", msg, parent=dialog):
-                            try:
-                                manager.resolve_conflict_overwrite(self._current_key)
-                                messagebox.showinfo(
-                                    "Success", "Vault overwritten successfully!", parent=dialog
-                                )
-                            except Exception as e:
-                                messagebox.showerror("Error", str(e), parent=dialog)
+                        messagebox.showinfo("Sync Complete", msg, parent=dialog)
+                    except ConflictError:
+                        _handle_conflict(manager)
+                    except InvalidPasswordError:
+                        messagebox.showerror(
+                            "Sync Failed",
+                            "Incorrect Vault Password. Could not decrypt vault.",
+                            parent=dialog,
+                        )
                     except Exception as e:
                         messagebox.showerror("Sync Failed", str(e), parent=dialog)
 
-                actions_frame = tk.Frame(body, bg=self.c["bg"])
-                actions_frame.pack(fill="x", pady=16)
-
-                btn_push = self._create_pill_button(
-                    actions_frame,
-                    text="⬆️  Push to Cloud",
-                    command=lambda: _do_sync("push"),
+                btn_sync_now = self._create_pill_button(
+                    sync_hero_frame,
+                    text="🔄   Sync Now (2-Way Sync)",
+                    command=_sync_now,
                     is_primary=True,
-                    padx=14,
-                    pady=6,
+                    font=("Segoe UI", 10, "bold"),
+                    padx=16,
+                    pady=8,
                 )
-                btn_push.pack(side="left", padx=(0, 8))
+                btn_sync_now.pack(fill="x")
+
+                tk.Label(
+                    sync_hero_frame,
+                    text="Pulls cloud changes, merges accounts, and uploads updated vault.",
+                    font=("Segoe UI", 8),
+                    bg=self.c["bg"],
+                    fg=self.c["fg_dim"],
+                ).pack(pady=(4, 0))
+
+                # ── Manual Operations Section ─────────────────────────────
+                sep = tk.Frame(body, bg=self.c["border"], height=1)
+                sep.pack(fill="x", pady=(4, 10))
+
+                tk.Label(
+                    body,
+                    text="Manual Operations",
+                    font=("Segoe UI", 8, "bold"),
+                    bg=self.c["bg"],
+                    fg=self.c["fg_dim"],
+                ).pack(anchor="w", pady=(0, 6))
+
+                manual_frame = tk.Frame(body, bg=self.c["bg"])
+                manual_frame.pack(fill="x", pady=(0, 16))
+
+                def _pull_vault() -> None:
+                    pwd = _get_sync_password()
+                    if not pwd:
+                        return
+                    manager = SyncManager(self._settings, pwd)
+                    try:
+                        count = manager.pull_and_merge(self._current_key)
+                        self._accounts = load_accounts(self._current_key)
+                        self._refresh_sidebar()
+                        self._settings.last_synced_at = time.time()
+                        save_settings(self._settings)
+                        _refresh_ui()
+                        messagebox.showinfo(
+                            "Pull Complete",
+                            f"Vault downloaded from cloud.\nAdded {count} new account(s).",
+                            parent=dialog,
+                        )
+                    except InvalidPasswordError:
+                        messagebox.showerror(
+                            "Pull Failed",
+                            "Incorrect Vault Password. Could not decrypt vault.",
+                            parent=dialog,
+                        )
+                    except Exception as e:
+                        messagebox.showerror("Pull Failed", str(e), parent=dialog)
+
+                def _push_vault() -> None:
+                    pwd = _get_sync_password()
+                    if not pwd:
+                        return
+                    manager = SyncManager(self._settings, pwd)
+                    try:
+                        ts = manager.push(self._current_key)
+                        self._settings.last_synced_at = float(ts)
+                        save_settings(self._settings)
+                        _refresh_ui()
+                        messagebox.showinfo(
+                            "Push Complete",
+                            "Local vault encrypted and uploaded to cloud!",
+                            parent=dialog,
+                        )
+                    except ConflictError:
+                        _handle_conflict(manager)
+                    except Exception as e:
+                        messagebox.showerror("Push Failed", str(e), parent=dialog)
 
                 btn_pull = self._create_pill_button(
-                    actions_frame,
-                    text="⬇️  Pull from Cloud",
-                    command=lambda: _do_sync("pull"),
+                    manual_frame,
+                    text="⬇️  Pull & Merge",
+                    command=_pull_vault,
                     padx=14,
                     pady=6,
                 )
-                btn_pull.pack(side="left")
+                btn_pull.pack(side="left", expand=True, fill="x", padx=(0, 6))
 
+                btn_push = self._create_pill_button(
+                    manual_frame,
+                    text="⬆️  Push Vault",
+                    command=_push_vault,
+                    padx=14,
+                    pady=6,
+                )
+                btn_push.pack(side="left", expand=True, fill="x", padx=(6, 0))
+
+                # ── Disconnect / Logout ───────────────────────────────────
                 def _logout() -> None:
-                    self._settings.sync_token = ""
-                    save_settings(self._settings)
-                    _refresh_ui()
+                    if messagebox.askyesno(
+                        "Disconnect Account",
+                        "Disconnect this device from cloud sync?",
+                        parent=dialog,
+                    ):
+                        self._settings.sync_token = ""
+                        self._settings.sync_username = ""
+                        save_settings(self._settings)
+                        _refresh_ui()
 
                 btn_logout = self._create_pill_button(
                     body,
-                    text="Logout from Cloud",
+                    text="Disconnect Account",
                     command=_logout,
                     is_danger=True,
                     padx=14,
                     pady=5,
                 )
-                btn_logout.pack(pady=20)
+                btn_logout.pack(pady=(6, 0))
             else:
-                # Login / Register Form
+                # ── Disconnected / Login Form ─────────────────────────────
                 tk.Label(
                     body,
-                    text="Server URL",
+                    text="Server Address (URL)",
                     font=("Segoe UI", 9, "bold"),
                     bg=self.c["bg"],
                     fg=self.c["fg"],
                 ).pack(anchor="w", pady=(0, 2))
+
                 url_cnt, url_entry = self._create_modern_entry(body, width=34)
-                url_entry.insert(0, self._settings.sync_server_url)
-                url_cnt.pack(fill="x", pady=(0, 10))
+                url_entry.insert(0, self._settings.sync_server_url or "http://127.0.0.1:8000")
+                url_cnt.pack(fill="x", pady=(0, 6))
+
+                # Presets
+                preset_frame = tk.Frame(body, bg=self.c["bg"])
+                preset_frame.pack(fill="x", pady=(0, 10))
+
+                def _set_preset(url: str) -> None:
+                    url_entry.delete(0, tk.END)
+                    url_entry.insert(0, url)
+
+                btn_render = tk.Button(
+                    preset_frame,
+                    text="☁️ Render Cloud",
+                    font=("Segoe UI", 8),
+                    bg=self.c["surface"],
+                    fg=self.c["fg_dim"],
+                    activebackground=self.c["surface_hover"],
+                    activeforeground=self.c["fg"],
+                    relief="flat",
+                    bd=0,
+                    cursor="hand2",
+                    padx=8,
+                    pady=2,
+                    command=lambda: _set_preset("https://totp-authenticator-banp.onrender.com/"),
+                )
+                btn_render.pack(side="left", padx=(0, 6))
+
+                btn_local = tk.Button(
+                    preset_frame,
+                    text="💻 Localhost",
+                    font=("Segoe UI", 8),
+                    bg=self.c["surface"],
+                    fg=self.c["fg_dim"],
+                    activebackground=self.c["surface_hover"],
+                    activeforeground=self.c["fg"],
+                    relief="flat",
+                    bd=0,
+                    cursor="hand2",
+                    padx=8,
+                    pady=2,
+                    command=lambda: _set_preset("http://127.0.0.1:8000"),
+                )
+                btn_local.pack(side="left")
 
                 tk.Label(
                     body,
@@ -1793,6 +2124,8 @@ class TOTPApp:
                     fg=self.c["fg"],
                 ).pack(anchor="w", pady=(0, 2))
                 user_cnt, user_entry = self._create_modern_entry(body, width=34)
+                if self._settings.sync_username:
+                    user_entry.insert(0, self._settings.sync_username)
                 user_cnt.pack(fill="x", pady=(0, 10))
 
                 tk.Label(
@@ -1802,17 +2135,52 @@ class TOTPApp:
                     bg=self.c["bg"],
                     fg=self.c["fg"],
                 ).pack(anchor="w", pady=(0, 2))
-                pwd_cnt, pwd_entry = self._create_modern_entry(body, width=34, show="*")
-                pwd_cnt.pack(fill="x", pady=(0, 16))
+
+                pwd_row = tk.Frame(body, bg=self.c["bg"])
+                pwd_row.pack(fill="x", pady=(0, 16))
+
+                pwd_cnt, pwd_entry = self._create_modern_entry(pwd_row, width=28, show="*")
+                pwd_cnt.pack(side="left", fill="x", expand=True)
+
+                pwd_visible = [False]
+
+                def _toggle_login_pwd() -> None:
+                    pwd_visible[0] = not pwd_visible[0]
+                    pwd_entry.configure(show="" if pwd_visible[0] else "*")
+                    btn_login_eye.configure(text="🙈" if pwd_visible[0] else "👁️")
+
+                btn_login_eye = tk.Button(
+                    pwd_row,
+                    text="👁️",
+                    font=("Segoe UI", 9),
+                    bg=self.c["surface"],
+                    fg=self.c["fg"],
+                    activebackground=self.c["surface_hover"],
+                    activeforeground=self.c["fg"],
+                    relief="flat",
+                    bd=0,
+                    cursor="hand2",
+                    padx=8,
+                    pady=4,
+                    command=_toggle_login_pwd,
+                )
+                btn_login_eye.pack(side="right", padx=(6, 0))
 
                 def _auth(is_register: bool) -> None:
-                    self._settings.sync_server_url = url_entry.get().strip()
-                    save_settings(self._settings)
+                    server_url = url_entry.get().strip().rstrip("/")
+                    if not server_url:
+                        messagebox.showerror(
+                            "Error", "Please enter a valid Server URL.", parent=dialog
+                        )
+                        return
+                    self._settings.sync_server_url = server_url
 
                     u = user_entry.get().strip()
                     p = pwd_entry.get().strip()
                     if not u or not p:
-                        messagebox.showerror("Error", "Missing credentials", parent=dialog)
+                        messagebox.showerror(
+                            "Error", "Please enter both Username and Password.", parent=dialog
+                        )
                         return
 
                     manager = SyncManager(self._settings, p)
@@ -1820,22 +2188,25 @@ class TOTPApp:
                         if is_register:
                             manager.client.register(u, p)
                             messagebox.showinfo(
-                                "Success", "Registered! You can now log in.", parent=dialog
+                                "Registration Successful",
+                                "Account registered successfully!\nYou can now log in.",
+                                parent=dialog,
                             )
                         else:
                             manager.client.login(u, p)
-                            self._settings.sync_token = manager.client.token
+                            self._settings.sync_token = manager.client.token or ""
+                            self._settings.sync_username = u
                             save_settings(self._settings)
                             _refresh_ui()
                     except Exception as e:
-                        messagebox.showerror("Error", str(e), parent=dialog)
+                        messagebox.showerror("Authentication Failed", str(e), parent=dialog)
 
                 btn_box = tk.Frame(body, bg=self.c["bg"])
                 btn_box.pack(fill="x", pady=6)
 
                 btn_login = self._create_pill_button(
                     btn_box,
-                    text="Login",
+                    text="Log In",
                     command=lambda: _auth(False),
                     is_primary=True,
                     padx=22,
@@ -1845,7 +2216,7 @@ class TOTPApp:
 
                 btn_reg = self._create_pill_button(
                     btn_box,
-                    text="Register New Account",
+                    text="Create New Account",
                     command=lambda: _auth(True),
                     padx=14,
                     pady=6,

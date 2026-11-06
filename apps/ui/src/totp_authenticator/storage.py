@@ -39,6 +39,8 @@ class Settings:
     lock_timeout_minutes: int = 5
     sync_server_url: str = "http://127.0.0.1:8000"
     sync_token: str = ""
+    sync_username: str = ""
+    last_synced_at: float = 0.0
 
 
 def read_raw_config() -> dict:
@@ -198,6 +200,8 @@ def load_settings() -> Settings:
         lock_timeout_minutes=settings_dict.get("lock_timeout_minutes", 5),
         sync_server_url=settings_dict.get("sync_server_url", "http://127.0.0.1:8000"),
         sync_token=settings_dict.get("sync_token", ""),
+        sync_username=settings_dict.get("sync_username", ""),
+        last_synced_at=float(settings_dict.get("last_synced_at", 0.0)),
     )
 
 
@@ -378,6 +382,7 @@ def reset_vault(backup: bool = True) -> str | None:
     # Preserve user preferences, but clear cloud sync token
     if "settings" in data and isinstance(data["settings"], dict):
         data["settings"]["sync_token"] = ""
+        data["settings"]["sync_username"] = ""
 
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)

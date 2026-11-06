@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- **Desktop Cloud 2-Way Synchronization ("Sync Now") (`apps/ui`)**:
+  - **Bidirectional Sync Engine**: Added `SyncManager.sync_now()`, offering a seamless 1-click sync flow that pulls cloud changes, deduplicates accounts locally against existing entries (by ID and normalized base32 secret), and pushes the unified encrypted vault back to the sync server.
+  - **Modern Cloud Sync Interface**: Completely redesigned `_open_sync_dialog()` with Modern Slate design tokens:
+    - **Connection Status Card**: Displays real-time server status, authenticated username badge, formatted `Last Synced` timestamp, and wrapped server address.
+    - **Hero Action**: Prominent `🔄 Sync Now (2-Way Sync)` button in brand Sky Blue (`#38BDF8`).
+    - **Granular Manual Operations**: Side-by-side `⬇️ Pull & Merge` and `⬆️ Push Vault` action buttons for manual control.
+    - **Server URL Presets**: One-click preset pills for Render Cloud Free Tier and Localhost on the login/register screen.
+    - **Password Masking Toggle**: Password entries now feature an interactive `👁️` toggle button.
+    - **Refined Disconnect**: Replaced centered red slab with an elegant, theme-aware `Disconnect Account` action with confirmation dialog.
+  - **Modern Slate Modal Prompts (`_prompt_text`, `_prompt_password`)**: Completely eliminated all retro Tkinter `simpledialog.askstring` white popups across the desktop application (Cloud Vault Password, Rename Account, Backup Export, Backup Import), replacing them with sleek, theme-consistent modal prompts with 1px focus rings, eye visibility toggles, and `<Return>` / `<Escape>` shortcuts.
+  - **Dedicated SyncManager Test Suite (`apps/ui/tests/test_sync_manager.py`)**: Authored 9 unit tests covering payload packing/unpacking, push, pull & deduplication, 2-way sync, conflict resolution, unauthenticated errors, and master-password protected vault support.
 - **Mobile Theme Mode & Dual-Language Selection (`apps/mobile`)**:
   - **Dynamic Theme Mode Switching**: Added `ConfigProvider` managing `ThemeMode.system`, `ThemeMode.dark`, and `ThemeMode.light` with persistence in `SharedPreferences` (`app_theme_mode`).
   - **Comprehensive Localization Framework (`AppLocalizations`)**: Implemented compile-time safe, typed translations for Vietnamese (`vi`) and English (`en`) supporting both system locale matching and explicit user selection.
@@ -20,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **PostgreSQL URI Normalization**: Normalized legacy `postgres://` connection strings to SQLAlchemy 2.0 compatible `postgresql://`.
 
 ### Fixed
+- **Desktop Cloud Sync Attribute Error & Master Password Vault Sync (`apps/ui`)**:
+  - Fixed `'SyncManager' object has no attribute 'pull'` error by defining `pull()`, `pull_and_merge()`, and `sync_now()` on `SyncManager`.
+  - Added optional `current_key` propagation to `_pack_payload()`, `pull_and_merge()`, and `push()` in `SyncManager`, allowing seamless cloud sync when local storage is protected with a master password.
 - **Mobile Theme SegmentedButton Background Color (`apps/mobile`)**: Replaced default Material 3 green (`secondaryContainer`) background on active theme segments with the app's brand Sky Blue (`theme.colorScheme.primary` / `#38BDF8`), harmonizing `SegmentedButton` styling with Modern Slate design tokens in both dark and light modes.
 - **Mobile Dual-Language Input Validations & Biometrics Localization (`apps/mobile`)**:
   - Localized form validation errors in `SettingsScreen` (server URL, username, password length) and `SyncPasswordDialog` (empty encryption password) to dynamically match active language preference.
