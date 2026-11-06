@@ -1640,7 +1640,22 @@ class TOTPApp:
         """Open the modernized Security Settings dialog."""
         dialog = tk.Toplevel(self.root)
         dialog.title("Security Settings")
-        dialog.geometry("420x460")
+        is_enc = is_config_encrypted()
+        dialog_w = 440
+        dialog_h = 560 if is_enc else 490
+
+        try:
+            self.root.update_idletasks()
+            rw = self.root.winfo_width()
+            rh = self.root.winfo_height()
+            rx = self.root.winfo_rootx()
+            ry = self.root.winfo_rooty()
+            x = rx + max(0, (rw - dialog_w) // 2)
+            y = ry + max(0, (rh - dialog_h) // 2)
+            dialog.geometry(f"{dialog_w}x{dialog_h}+{x}+{y}")
+        except Exception:
+            dialog.geometry(f"{dialog_w}x{dialog_h}")
+
         dialog.configure(bg=self.c["bg"])
         dialog.resizable(False, False)
         dialog.grab_set()
@@ -1658,7 +1673,6 @@ class TOTPApp:
         ).pack(anchor="w")
 
         # Status badge card
-        is_enc = is_config_encrypted()
         status_bg = self.c["bg_card"]
         status_card = tk.Frame(
             dialog,
@@ -1704,43 +1718,226 @@ class TOTPApp:
         timeout_entry.config(textvariable=timeout_var)
         timeout_cnt.pack(anchor="w", pady=(0, 10))
 
-        # Password setting
-        pwd_label_text = "Change Master Password" if is_enc else "Set Master Password"
-        tk.Label(
-            form,
-            text=pwd_label_text,
-            font=("Segoe UI", 9, "bold"),
-            bg=self.c["bg"],
-            fg=self.c["fg"],
-        ).pack(anchor="w", pady=(0, 2))
-        pwd_cnt, pwd_entry = self._create_modern_entry(form, width=34, show="*")
-        pwd_cnt.pack(fill="x", pady=(0, 12))
+        # Password settings (with old password verification & match checks)
+        if is_enc:
+            tk.Label(
+                form,
+                text="Current Master Password",
+                font=("Segoe UI", 9, "bold"),
+                bg=self.c["bg"],
+                fg=self.c["fg"],
+            ).pack(anchor="w", pady=(0, 2))
+            old_cnt, old_entry = self._create_modern_entry(
+                form, width=34, show="*", has_toggle=True
+            )
+            old_cnt.pack(fill="x", pady=(0, 8))
+
+            tk.Label(
+                form,
+                text="New Master Password",
+                font=("Segoe UI", 9, "bold"),
+                bg=self.c["bg"],
+                fg=self.c["fg"],
+            ).pack(anchor="w", pady=(0, 2))
+            new_cnt, new_entry = self._create_modern_entry(
+                form, width=34, show="*", has_toggle=True
+            )
+            new_cnt.pack(fill="x", pady=(0, 8))
+
+            tk.Label(
+                form,
+                text="Confirm New Password",
+                font=("Segoe UI", 9, "bold"),
+                bg=self.c["bg"],
+                fg=self.c["fg"],
+            ).pack(anchor="w", pady=(0, 2))
+            confirm_cnt, confirm_entry = self._create_modern_entry(
+                form, width=34, show="*", has_toggle=True
+            )
+            confirm_cnt.pack(fill="x", pady=(0, 12))
+        else:
+            tk.Label(
+                form,
+                text="Set Master Password",
+                font=("Segoe UI", 9, "bold"),
+                bg=self.c["bg"],
+                fg=self.c["fg"],
+            ).pack(anchor="w", pady=(0, 2))
+            new_cnt, new_entry = self._create_modern_entry(
+                form, width=34, show="*", has_toggle=True
+            )
+            new_cnt.pack(fill="x", pady=(0, 8))
+
+            tk.Label(
+                form,
+                text="Confirm Password",
+                font=("Segoe UI", 9, "bold"),
+                bg=self.c["bg"],
+                fg=self.c["fg"],
+            ).pack(anchor="w", pady=(0, 2))
+            confirm_cnt, confirm_entry = self._create_modern_entry(
+                form, width=34, show="*", has_toggle=True
+            )
+            confirm_cnt.pack(fill="x", pady=(0, 12))
 
         def _save() -> None:
-            try:
-                mins = int(timeout_var.get())
-                self._settings.lock_timeout_minutes = max(1, mins)
-                save_settings(self._settings)
-            except ValueError:
-                pass
+            timeout_str = timeout_var.get().strip()
+            if timeout_str:
+                try:
+                    mins = int(timeout_str)
+                    if mins < 1:
+                        messagebox.showerror(
+                            "Invalid Timeout",
+                            "Auto-lock timeout must be at least 1 minute.",
+                            parent=dialog,
+                        )
+                        return
+                    self._settings.lock_timeout_minutes = mins
+                    save_settings(self._settings)
+                except ValueError:
+                    messagebox.showerror(
+                        "Invalid Timeout",
+                        "Auto-lock timeout must be a valid integer.",
+                        parent=dialog,
+                    )
+                    return
 
-            pwd = pwd_entry.get()
-            if pwd:
-                self._current_key = set_encryption(pwd, self._current_key)
-                messagebox.showinfo("Success", "Password updated successfully.", parent=dialog)
-            dialog.destroy()
+            new_pwd = new_entry.get()
+            confirm_pwd = confirm_entry.get()
+
+            if is_enc:
+                old_pwd = old_entry.get()
+                # If all password fields are blank, only timeout was updated
+                if not old_pwd and not new_pwd and not confirm_pwd:
+                    messagebox.showinfo(
+                        "Success", "Settings saved successfully.", parent=dialog
+                    )
+                    dialog.destroy()
+                    return
+
+                if not old_pwd:
+                    messagebox.showerror(
+                        "Current Password Required",
+                        "Please enter your current master password to change it.",
+                        parent=dialog,
+                    )
+                    return
+
+                try:
+                    verified_key = verify_password(old_pwd)
+                except InvalidPasswordError:
+                    messagebox.showerror(
+                        "Authentication Failed",
+                        "Incorrect current master password.",
+                        parent=dialog,
+                    )
+                    return
+
+                if not new_pwd:
+                    messagebox.showerror(
+                        "New Password Required",
+                        "Please enter a new master password.",
+                        parent=dialog,
+                    )
+                    return
+
+                if len(new_pwd) < 6:
+                    messagebox.showerror(
+                        "Password Too Short",
+                        "New master password must be at least 6 characters long.",
+                        parent=dialog,
+                    )
+                    return
+
+                if new_pwd != confirm_pwd:
+                    messagebox.showerror(
+                        "Password Mismatch",
+                        "New password and confirmation do not match.",
+                        parent=dialog,
+                    )
+                    return
+
+                self._current_key = set_encryption(new_pwd, verified_key)
+                messagebox.showinfo(
+                    "Success", "Master password updated successfully.", parent=dialog
+                )
+                dialog.destroy()
+            else:
+                # Vault is unencrypted
+                if not new_pwd and not confirm_pwd:
+                    messagebox.showinfo(
+                        "Success", "Settings saved successfully.", parent=dialog
+                    )
+                    dialog.destroy()
+                    return
+
+                if not new_pwd:
+                    messagebox.showerror(
+                        "Password Required",
+                        "Please enter a master password.",
+                        parent=dialog,
+                    )
+                    return
+
+                if len(new_pwd) < 6:
+                    messagebox.showerror(
+                        "Password Too Short",
+                        "Master password must be at least 6 characters long.",
+                        parent=dialog,
+                    )
+                    return
+
+                if new_pwd != confirm_pwd:
+                    messagebox.showerror(
+                        "Password Mismatch",
+                        "Master password and confirmation do not match.",
+                        parent=dialog,
+                    )
+                    return
+
+                self._current_key = set_encryption(new_pwd, self._current_key)
+                messagebox.showinfo(
+                    "Success",
+                    "Master password set successfully. Vault is now encrypted.",
+                    parent=dialog,
+                )
+                dialog.destroy()
 
         def _remove() -> None:
-            msg = (
-                "Are you sure you want to remove password protection?\n"
-                "Secrets will be stored in plaintext."
+            pwd = self._prompt_password(
+                "Remove Master Password",
+                "Enter your current master password to remove password protection:\n\n"
+                "⚠️ Warning: Vault accounts will be stored unencrypted in plaintext.",
+                parent=dialog,
+                confirm_text="Remove Protection",
             )
-            if messagebox.askyesno("Remove Password", msg, parent=dialog):
-                if self._current_key:
-                    remove_encryption(self._current_key)
-                    self._current_key = None
-                    messagebox.showinfo("Success", "Password protection removed.", parent=dialog)
-                dialog.destroy()
+            if pwd is None:
+                return  # Cancelled
+
+            if not pwd:
+                messagebox.showerror(
+                    "Error", "Password cannot be empty.", parent=dialog
+                )
+                return
+
+            try:
+                verified_key = verify_password(pwd)
+            except InvalidPasswordError:
+                messagebox.showerror(
+                    "Authentication Failed",
+                    "Incorrect master password. Password protection was not removed.",
+                    parent=dialog,
+                )
+                return
+
+            remove_encryption(verified_key)
+            self._current_key = None
+            messagebox.showinfo(
+                "Success",
+                "Password protection removed. Vault is now unencrypted.",
+                parent=dialog,
+            )
+            dialog.destroy()
 
         btn_box = tk.Frame(dialog, bg=self.c["bg"])
         btn_box.pack(fill="x", padx=24, pady=(0, 14))

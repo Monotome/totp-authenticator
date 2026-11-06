@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- **Master Password Verification & Confirmation in Security Settings (`apps/ui`)**:
+  - Required entering and verifying the **Current Master Password** before changing or removing vault password protection, eliminating the security vulnerability where an unlocked local session could alter or wipe encryption without knowing the current password.
+  - Added dedicated modern inputs for **Current Master Password**, **New Master Password** (>= 6 characters minimum), and **Confirm New Password**, each featuring integrated vector eye toggles and focus ring borders.
+  - Enforced modal master password re-authentication (`_prompt_password`) before executing "Remove Password", preventing unauthorized decryption.
+  - Added cryptographic verification (`verify_password`) and constant-time key derivation before re-encrypting the vault via `set_encryption()`.
 - **Integrated Vector Password Visibility Toggle (`apps/ui`)**:
   - Replaced disjointed external emoji button with an integrated, borderless vector eye button embedded directly inside the 1px focus-ring entry container.
   - Implemented crisp anti-aliased PIL vector icons (`eye` and `eye_off`) with dynamic hover brightness states (`fg_dim` -> `fg`).

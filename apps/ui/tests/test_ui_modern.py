@@ -330,3 +330,184 @@ def test_sync_dialog_renders_disconnected_state(tk_root):
         tk_root.after_cancel(app._update_job)
 
 
+def test_security_dialog_encrypted_vault_renders_fields(tk_root):
+    """Verify Security Settings dialog shows old, new, and confirm password fields."""
+    from totp_authenticator.storage import set_encryption
+
+    key = set_encryption("secret123")
+    app = TOTPApp(tk_root)
+    app._current_key = key
+
+    app._open_security_dialog()
+
+    toplevels = [w for w in tk_root.winfo_children() if isinstance(w, tk.Toplevel)]
+    assert len(toplevels) >= 1
+    dialog = toplevels[-1]
+
+    def _find_all_labels(parent):
+        found = []
+        for child in parent.winfo_children():
+            if isinstance(child, tk.Label):
+                found.append(child)
+            found.extend(_find_all_labels(child))
+        return found
+
+    def _find_all_buttons(parent):
+        found = []
+        for child in parent.winfo_children():
+            if isinstance(child, tk.Button):
+                found.append(child)
+            found.extend(_find_all_buttons(child))
+        return found
+
+    all_labels = _find_all_labels(dialog)
+    label_texts = [lbl.cget("text") for lbl in all_labels]
+
+    assert any("Current Master Password" in t for t in label_texts)
+    assert any("New Master Password" in t for t in label_texts)
+    assert any("Confirm New Password" in t for t in label_texts)
+
+    all_buttons = _find_all_buttons(dialog)
+    btn_texts = [b.cget("text") for b in all_buttons]
+    assert any("Save Settings" in t for t in btn_texts)
+    assert any("Remove Password" in t for t in btn_texts)
+
+    dialog.destroy()
+    if app._update_job:
+        tk_root.after_cancel(app._update_job)
+
+
+def test_security_dialog_unencrypted_vault_renders_fields(tk_root):
+    """Verify Security Settings dialog shows set and confirm fields when unencrypted."""
+    app = TOTPApp(tk_root)
+
+    app._open_security_dialog()
+
+    toplevels = [w for w in tk_root.winfo_children() if isinstance(w, tk.Toplevel)]
+    assert len(toplevels) >= 1
+    dialog = toplevels[-1]
+
+    def _find_all_labels(parent):
+        found = []
+        for child in parent.winfo_children():
+            if isinstance(child, tk.Label):
+                found.append(child)
+            found.extend(_find_all_labels(child))
+        return found
+
+    def _find_all_buttons(parent):
+        found = []
+        for child in parent.winfo_children():
+            if isinstance(child, tk.Button):
+                found.append(child)
+            found.extend(_find_all_buttons(child))
+        return found
+
+    all_labels = _find_all_labels(dialog)
+    label_texts = [lbl.cget("text") for lbl in all_labels]
+
+    assert any("Set Master Password" in t for t in label_texts)
+    assert any("Confirm Password" in t for t in label_texts)
+    assert not any("Current Master Password" in t for t in label_texts)
+
+    all_buttons = _find_all_buttons(dialog)
+    btn_texts = [b.cget("text") for b in all_buttons]
+    assert any("Save Settings" in t for t in btn_texts)
+    assert not any("Remove Password" in t for t in btn_texts)
+
+    dialog.destroy()
+    if app._update_job:
+        tk_root.after_cancel(app._update_job)
+
+
+def test_security_dialog_change_password_flow(tk_root, monkeypatch):
+    """Verify master password change enforces old password check and updates key."""
+    from totp_authenticator.storage import set_encryption, verify_password
+
+    key = set_encryption("old_pass123")
+    app = TOTPApp(tk_root)
+    app._current_key = key
+
+    app._open_security_dialog()
+
+    toplevels = [w for w in tk_root.winfo_children() if isinstance(w, tk.Toplevel)]
+    dialog = toplevels[-1]
+
+    def _find_entries(parent):
+        entries = []
+        for child in parent.winfo_children():
+            if isinstance(child, tk.Entry):
+                entries.append(child)
+            entries.extend(_find_entries(child))
+        return entries
+
+    entries = _find_entries(dialog)
+    assert len(entries) >= 4
+    _timeout_e, old_e, new_e, confirm_e = entries[0], entries[1], entries[2], entries[3]
+
+    errors = []
+    infos = []
+    monkeypatch.setattr(
+        "tkinter.messagebox.showerror",
+        lambda title, msg, **kw: errors.append((title, msg)),
+    )
+    monkeypatch.setattr(
+        "tkinter.messagebox.showinfo",
+        lambda title, msg, **kw: infos.append((title, msg)),
+    )
+
+    def _find_buttons(parent):
+        btns = []
+        for child in parent.winfo_children():
+            if isinstance(child, tk.Button):
+                btns.append(child)
+            btns.extend(_find_buttons(child))
+        return btns
+
+    btns = _find_buttons(dialog)
+    save_btn = next(b for b in btns if b.cget("text") == "Save Settings")
+
+    # 1. Test wrong old password
+    old_e.insert(0, "wrong_old_pwd")
+    new_e.insert(0, "new_pass456")
+    confirm_e.insert(0, "new_pass456")
+    save_btn.invoke()
+    assert any("Authentication Failed" in err[0] for err in errors)
+
+    # 2. Test password mismatch
+    errors.clear()
+    old_e.delete(0, tk.END)
+    old_e.insert(0, "old_pass123")
+    confirm_e.delete(0, tk.END)
+    confirm_e.insert(0, "different_pass")
+    save_btn.invoke()
+    assert any("Password Mismatch" in err[0] for err in errors)
+
+    # 3. Test password too short
+    errors.clear()
+    new_e.delete(0, tk.END)
+    new_e.insert(0, "123")
+    confirm_e.delete(0, tk.END)
+    confirm_e.insert(0, "123")
+    save_btn.invoke()
+    assert any("Password Too Short" in err[0] for err in errors)
+
+    # 4. Test valid password change
+    errors.clear()
+    new_e.delete(0, tk.END)
+    new_e.insert(0, "new_pass456")
+    confirm_e.delete(0, tk.END)
+    confirm_e.insert(0, "new_pass456")
+    save_btn.invoke()
+    assert len(errors) == 0
+    assert any("Master password updated successfully" in info[1] for info in infos)
+
+    # Verify that new password unlocks the vault
+    new_key = verify_password("new_pass456")
+    assert new_key == app._current_key
+
+    if app._update_job:
+        tk_root.after_cancel(app._update_job)
+
+
+
