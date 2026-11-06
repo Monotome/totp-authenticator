@@ -59,7 +59,7 @@ class _SyncPasswordDialogState extends State<SyncPasswordDialog> {
     final password = _controller.text;
     if (password.isEmpty) {
       setState(() {
-        _errorText = 'Vui lòng nhập mật khẩu mã hóa.';
+        _errorText = context.l10n.vaultPasswordErrorEmpty;
       });
       return;
     }
@@ -157,7 +157,7 @@ class _SyncPasswordDialogState extends State<SyncPasswordDialog> {
                     ),
                     Expanded(
                       child: Text(
-                        'Ghi nhớ trên thiết bị này (lưu trong Keystore)',
+                        l10n.rememberOnDevice,
                         style: TextStyle(
                           fontSize: 13,
                           color: theme.colorScheme.onSurface.withValues(alpha: 0.85),

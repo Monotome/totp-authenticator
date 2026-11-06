@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:totp_authenticator/l10n/app_localizations.dart';
 import 'package:totp_authenticator/widgets/sync_password_dialog.dart';
 
 void main() {
@@ -17,6 +19,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Open Dialog'));
       await tester.pumpAndSettle();
@@ -41,6 +44,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Open Dialog'));
       await tester.pumpAndSettle();
@@ -68,6 +72,7 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Open Dialog'));
       await tester.pumpAndSettle();
@@ -82,6 +87,39 @@ void main() {
       expect(result, isNotNull);
       expect(result!.password, equals('my-e2ee-secret'));
       expect(result!.remember, isTrue);
+    });
+
+    testWidgets('submitting empty password in English shows localized validation error', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () => SyncPasswordDialog.show(context),
+                child: const Text('Open Dialog'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Open Dialog'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Remember on this device (secure Keystore)'), findsOneWidget);
+      await tester.tap(find.text('Confirm'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Please enter encryption password.'), findsOneWidget);
     });
   });
 }

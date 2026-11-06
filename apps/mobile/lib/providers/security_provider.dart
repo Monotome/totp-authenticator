@@ -39,6 +39,8 @@ class SecurityProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool get isInitialized => _isInitialized;
 
   String get biometricDisplayName => _biometricService.getBiometricDisplayName(_availableBiometrics);
+  String getBiometricDisplayName([String? languageCode]) =>
+      _biometricService.getBiometricDisplayName(_availableBiometrics, languageCode: languageCode);
 
   /// Initializes preferences, hardware checks, and initial lock state.
   Future<void> init() async {
