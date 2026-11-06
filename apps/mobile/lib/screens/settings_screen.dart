@@ -992,7 +992,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
             const SizedBox(height: 14),
-            _buildDetailRow(l10n.versionLabel, 'v0.8.2', Icons.tag, theme),
+            _buildDetailRow(l10n.versionLabel, 'v0.8.3', Icons.tag, theme),
             const Divider(height: 18),
             _buildDetailRow(l10n.twoFaStandardLabel, 'RFC 6238 / RFC 4226', Icons.check_circle_outline, theme),
             const Divider(height: 18),

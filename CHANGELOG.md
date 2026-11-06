@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [v0.8.3] - 2026-11-06
 ### Added
 - **Desktop Cloud 2-Way Synchronization ("Sync Now") (`apps/ui`)**:
   - **Bidirectional Sync Engine**: Added `SyncManager.sync_now()`, offering a seamless 1-click sync flow that pulls cloud changes, deduplicates accounts locally against existing entries (by ID and normalized base32 secret), and pushes the unified encrypted vault back to the sync server.

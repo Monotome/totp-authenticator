@@ -88,12 +88,21 @@ Items are loosely prioritized within each milestone.
 
 ---
 
-## 📱 v0.8.2 — Mobile Modern Slate, Launcher Icons & Localization (Current)
+## 📱 v0.8.2 — Mobile Modern Slate, Launcher Icons & Localization
 - [x] Mobile Modern Slate UI & Grouped Settings Overhaul
 - [x] Custom Vector Launcher Icons across Android mipmap & iOS asset catalogs
 - [x] Theme Mode selection (`System`, `Dark`, `Light`) with persistence in `ConfigProvider`
 - [x] Dual-language localization framework (`AppLocalizations` for Vietnamese and English)
 - [x] Visual golden snapshot testing suite for mobile screens (`LockScreen`, `HomeScreen`, `SettingsScreen`)
+
+---
+
+## ☁️ v0.8.3 — Desktop 2-Way Cloud Sync, Modern Modals & Cloud Free Tier (Current)
+- [x] Desktop 1-click 2-Way Sync (`SyncManager.sync_now()`) with deduplication
+- [x] Modern Slate Cloud Sync Dialog with status card, server presets, and last synced timestamp
+- [x] Modern Slate password/text modal prompt (`_prompt_text` / `_prompt_password`) replacing retro Tkinter popups
+- [x] Cloud API Free Tier compatibility (dynamic `$PORT` binding on Render/Railway, health probes, CORS)
+- [x] Mobile theme SegmentedButton Sky Blue active indicator and dual-language input error validations
 
 ---
 
