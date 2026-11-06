@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Settings UI Preference Controls**: Added a grouped `GIAO DIỆN & NGÔN NGỮ` (`APPEARANCE & LANGUAGE`) card in `SettingsScreen` featuring a 3-way `SegmentedButton<ThemeMode>` (System / Dark / Light) and a styled language `DropdownButton` (Theo hệ thống / Tiếng Việt / English).
   - **Full Mobile Screen Localization**: Localized all mobile user interfaces, labels, dialogs, error messages, and bottom sheets across `HomeScreen`, `LockScreen`, `AddAccountScreen`, `ScanScreen`, `ScanConfirmSheet`, and `SyncPasswordDialog`.
   - **Test Coverage**: Added dedicated unit tests for `AppLocalizations` (`app_localizations_test.dart`), `ConfigProvider` (`config_provider_test.dart`), localized widget tests (`settings_screen_test.dart`, `sync_password_dialog_test.dart`), and updated visual golden tests (`golden_test.dart`).
+- **Cloud Free Tier Deployment Compatibility (`apps/api`)**:
+  - **Dynamic Port Binding**: Updated `Dockerfile` entrypoint to `sh -c "uvicorn server.main:app --host 0.0.0.0 --port ${PORT:-8000}"`, enabling seamless automatic port detection across cloud free-tier hosting providers (Render `$PORT=10000`, Railway dynamic `$PORT`, Fly.io, Koyeb).
+  - **Health Probes & Root Route**: Added `@app.get("/")` and `@app.get("/health")` endpoints to return `200 OK` for automated cloud uptime pingers and health checks.
+  - **CORS Middleware**: Integrated `CORSMiddleware` with permissive headers for cross-origin web and mobile client communication.
+  - **PostgreSQL URI Normalization**: Normalized legacy `postgres://` connection strings to SQLAlchemy 2.0 compatible `postgresql://`.
 
 ### Fixed
 - **Mobile Theme SegmentedButton Background Color (`apps/mobile`)**: Replaced default Material 3 green (`secondaryContainer`) background on active theme segments with the app's brand Sky Blue (`theme.colorScheme.primary` / `#38BDF8`), harmonizing `SegmentedButton` styling with Modern Slate design tokens in both dark and light modes.
