@@ -255,3 +255,78 @@ def test_action_icons_rendering(tk_root):
     if app._update_job:
         tk_root.after_cancel(app._update_job)
 
+
+def test_sync_dialog_renders_connected_state(tk_root):
+    """Verify that Cloud Sync dialog renders 2-way sync button and controls when connected."""
+    app = TOTPApp(tk_root)
+    app._settings.sync_token = "valid-token-xyz"
+    app._settings.sync_username = "alice"
+    app._settings.sync_server_url = "https://example-sync.com"
+
+    # Open sync dialog
+    app._open_sync_dialog()
+
+    # Find the opened Toplevel dialog
+    toplevels = [w for w in tk_root.winfo_children() if isinstance(w, tk.Toplevel)]
+    assert len(toplevels) >= 1
+    dialog = toplevels[-1]
+    assert "Cloud Sync" in dialog.title()
+
+    # Recursively collect all buttons
+    def _find_all_buttons(parent):
+        found = []
+        for child in parent.winfo_children():
+            if isinstance(child, tk.Button):
+                found.append(child)
+            found.extend(_find_all_buttons(child))
+        return found
+
+    all_buttons = _find_all_buttons(dialog)
+    btn_texts = [b.cget("text") for b in all_buttons]
+
+    # Verify Hero 2-Way Sync button exists
+    assert any("Sync Now (2-Way Sync)" in t for t in btn_texts)
+    # Verify Pull & Merge exists
+    assert any("Pull & Merge" in t for t in btn_texts)
+    # Verify Push Vault exists
+    assert any("Push Vault" in t for t in btn_texts)
+    # Verify Disconnect Account exists
+    assert any("Disconnect Account" in t for t in btn_texts)
+
+    dialog.destroy()
+    if app._update_job:
+        tk_root.after_cancel(app._update_job)
+
+
+def test_sync_dialog_renders_disconnected_state(tk_root):
+    """Verify that when no sync_token is set, Cloud Sync dialog renders login form with presets."""
+    app = TOTPApp(tk_root)
+    app._settings.sync_token = ""
+
+    app._open_sync_dialog()
+
+    toplevels = [w for w in tk_root.winfo_children() if isinstance(w, tk.Toplevel)]
+    assert len(toplevels) >= 1
+    dialog = toplevels[-1]
+
+    def _find_all_buttons(parent):
+        found = []
+        for child in parent.winfo_children():
+            if isinstance(child, tk.Button):
+                found.append(child)
+            found.extend(_find_all_buttons(child))
+        return found
+
+    all_buttons = _find_all_buttons(dialog)
+    btn_texts = [b.cget("text") for b in all_buttons]
+
+    assert any("Log In" in t for t in btn_texts)
+    assert any("Create New Account" in t for t in btn_texts)
+    assert any("Render Cloud" in t for t in btn_texts)
+    assert any("Localhost" in t for t in btn_texts)
+
+    dialog.destroy()
+    if app._update_job:
+        tk_root.after_cancel(app._update_job)
+
+
