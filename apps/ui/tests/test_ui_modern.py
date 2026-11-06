@@ -209,7 +209,8 @@ def test_toolbar_buttons_geometry_and_alignment(tk_root):
         x_sync = app.btn_sync.winfo_rootx()
         x_sec = app.btn_security.winfo_rootx()
         x_thm = app.btn_theme_toggle.winfo_rootx()
-        assert x_sync < x_sec < x_thm, f"Buttons not laid out left-to-right: {x_sync}, {x_sec}, {x_thm}"
+        msg = f"Buttons not laid out left-to-right: {x_sync}, {x_sec}, {x_thm}"
+        assert x_sync < x_sec < x_thm, msg
 
         if app._update_job:
             tk_root.after_cancel(app._update_job)
