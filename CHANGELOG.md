@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- **Desktop Dynamic Window Centering & Floating Toast Notifications (`apps/ui`)**:
+  - Implemented universal `_position_dialog()` helper centering all modals and popups (Add Account, Security Settings, Cloud Sync, Vault Reset, Text Prompts) directly over the parent window with boundary clamping, eliminating the bug where dialogs appeared far off to the left of the screen.
+  - Centered the main application window on the user's primary monitor on first launch when no saved window coordinates exist.
+  - Implemented `_show_toast()` non-intrusive floating toast notifications on the main window for all key user actions (saving settings, adding accounts, renaming accounts, deleting accounts, switching themes).
+  - Replaced abrupt modal `messagebox` alerts with inline form validation feedback in Security Settings and Add Account dialogs, providing instant visual feedback and smooth auto-dismissal without blocking mouse interactions.
 - **AI Agent Security Guardrails & Threat Modeling Mandate (`AGENTS.md`, `.agents/skills`)**:
   - Enforced Inviolable Core Commandment #9 in `AGENTS.md`: Mandatory Critical Action Re-Authentication (Sudo Mode) across all sensitive flows (password changes, encryption removal, backup export, and vault deletion).
   - Integrated Adversary Threat Modeling and negative/abuse automated test requirements into `python-cryptography-security`, `pytest-testing-patterns`, and `code-review` agent skills.

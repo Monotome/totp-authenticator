@@ -472,35 +472,31 @@ def test_security_dialog_change_password_flow(tk_root, monkeypatch):
     new_e.insert(0, "new_pass456")
     confirm_e.insert(0, "new_pass456")
     save_btn.invoke()
-    assert any("Authentication Failed" in err[0] for err in errors)
+    assert "Incorrect current master password" in dialog.lbl_feedback.cget("text")
 
     # 2. Test password mismatch
-    errors.clear()
     old_e.delete(0, tk.END)
     old_e.insert(0, "old_pass123")
     confirm_e.delete(0, tk.END)
     confirm_e.insert(0, "different_pass")
     save_btn.invoke()
-    assert any("Password Mismatch" in err[0] for err in errors)
+    assert "do not match" in dialog.lbl_feedback.cget("text")
 
     # 3. Test password too short
-    errors.clear()
     new_e.delete(0, tk.END)
     new_e.insert(0, "123")
     confirm_e.delete(0, tk.END)
     confirm_e.insert(0, "123")
     save_btn.invoke()
-    assert any("Password Too Short" in err[0] for err in errors)
+    assert "at least 6 characters" in dialog.lbl_feedback.cget("text")
 
     # 4. Test valid password change
-    errors.clear()
     new_e.delete(0, tk.END)
     new_e.insert(0, "new_pass456")
     confirm_e.delete(0, tk.END)
     confirm_e.insert(0, "new_pass456")
     save_btn.invoke()
-    assert len(errors) == 0
-    assert any("Master password updated successfully" in info[1] for info in infos)
+    assert "Master password updated successfully" in dialog.lbl_feedback.cget("text")
 
     # Verify that new password unlocks the vault
     new_key = verify_password("new_pass456")
@@ -508,6 +504,40 @@ def test_security_dialog_change_password_flow(tk_root, monkeypatch):
 
     if app._update_job:
         tk_root.after_cancel(app._update_job)
+
+
+def test_toast_notification(tk_root):
+    """Verify that floating toast renders with correct message and styles."""
+    app = TOTPApp(tk_root)
+    app._show_toast("Operation completed successfully", is_error=False)
+
+    assert app._toast_frame is not None
+    assert "Operation completed successfully" in app._toast_lbl.cget("text")
+    assert "✓" in app._toast_lbl.cget("text")
+
+    app._show_toast("Operation failed", is_error=True)
+    assert "Operation failed" in app._toast_lbl.cget("text")
+    assert "⚠️" in app._toast_lbl.cget("text")
+
+    if app._toast_timer:
+        tk_root.after_cancel(app._toast_timer)
+    if app._update_job:
+        tk_root.after_cancel(app._update_job)
+
+
+def test_position_dialog_centers_over_parent(tk_root):
+    """Verify that _position_dialog computes coordinates relative to parent."""
+    app = TOTPApp(tk_root)
+    dialog = tk.Toplevel(tk_root)
+    app._position_dialog(dialog, 400, 300, parent=tk_root)
+    dialog.update_idletasks()
+
+    geom = dialog.geometry()
+    assert "+" in geom
+    dialog.destroy()
+    if app._update_job:
+        tk_root.after_cancel(app._update_job)
+
 
 
 
