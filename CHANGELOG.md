@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- **Mobile Modern Slate App Launcher Icons (`apps/mobile`)**:
+  - Designed and generated high-resolution 1024x1024 vector-styled master icon and transparent adaptive foreground matching the Modern Slate theme (`#0B0F19` deep space background, `#1E293B` shield, `#38BDF8` sky blue outline, padlock, and `#4ADE80` mint green 2FA verification badge).
+  - Integrated `flutter_launcher_icons` automated generation for all Android mipmap densities (`mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`), adaptive vector background/foreground (`res/values/colors.xml`, `mipmap-anydpi-v26/`), and iOS AppIcon asset catalogs (`AppIcon.appiconset`).
+  - Standardized application display name to "TOTP Authenticator" in Android (`AndroidManifest.xml` `android:label`) and iOS (`Info.plist` `CFBundleDisplayName`).
 - **Desktop UI Geometry & Visual Alignment Testing (`apps/ui`)**: Added automated geometry assertions in `test_ui_modern.py` verifying that toolbar buttons share identical vertical coordinates (`winfo_rooty()`), exact 28x28px dimensions, strictly ordered horizontal positions, vector icon caching, and inner wrapper padding isolating focus border colors.
 - **Mobile Flutter Golden Visual Testing (`apps/mobile`)**: Established pixel-by-pixel visual snapshot testing pipeline using `matchesGoldenFile` for Mobile UI (`LockScreen`, `HomeScreen`, `SettingsScreen`), rendering baseline PNGs at 1080x1920 viewport to automatically catch visual layout regressions in CI/test runs.
 
