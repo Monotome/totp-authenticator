@@ -2,6 +2,7 @@ import jwt
 from typing import Annotated
 
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -11,7 +12,15 @@ from . import models, auth, database
 # Create tables
 models.Base.metadata.create_all(bind=database.engine)
 
-app = FastAPI(title="TOTP Sync API", version="0.1.0")
+app = FastAPI(title="TOTP Sync API", version="0.8.2")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -49,6 +58,18 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Session 
     return user
 
 # --- Routes ---
+@app.get("/")
+def root():
+    return {
+        "status": "healthy",
+        "service": "TOTP Authenticator Cloud Sync API",
+        "version": "0.8.2",
+    }
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 @app.post("/register")
 def register(user: UserCreate, db: Session = Depends(database.get_db)) -> dict[str, str]:
     db_user = db.query(models.User).filter(models.User.username == user.username).first()

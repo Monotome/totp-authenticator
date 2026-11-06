@@ -28,6 +28,16 @@ def setup_database():
     yield
     Base.metadata.drop_all(bind=engine)
 
+def test_health_check_endpoints():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.json()["status"] == "healthy"
+    assert "version" in response.json()
+
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json()["status"] == "ok"
+
 def test_register_and_login():
     response = client.post("/register", json={"username": "testuser", "password": "testpassword"})
     assert response.status_code == 200
