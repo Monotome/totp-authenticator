@@ -6,7 +6,7 @@
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <application
         android:usesCleartextTraffic="true"
-        android:label="totp_authenticator"
+        android:label="TOTP Authenticator"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
