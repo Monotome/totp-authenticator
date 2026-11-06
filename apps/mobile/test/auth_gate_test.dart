@@ -68,7 +68,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('🔐 TOTP Authenticator'), findsOneWidget);
+      expect(find.text('TOTP Authenticator'), findsOneWidget);
       expect(find.byType(LockScreen), findsNothing);
     });
 

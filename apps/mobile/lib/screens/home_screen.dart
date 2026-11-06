@@ -20,7 +20,14 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('🔐 TOTP Authenticator'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.shield_outlined, color: theme.colorScheme.primary, size: 20),
+            const SizedBox(width: 8),
+            const Text('TOTP Authenticator'),
+          ],
+        ),
         actions: [
           Stack(
             alignment: Alignment.center,
@@ -62,29 +69,63 @@ class HomeScreen extends StatelessWidget {
       body: accounts.isEmpty ? _buildEmptyState(context) : _buildList(context, accounts, remaining, theme),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openAddAccount(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Account'),
+        icon: const Icon(Icons.add, size: 20),
+        label: const Text(
+          'Thêm tài khoản',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
       ),
     );
   }
 
   Widget _buildEmptyState(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.shield_outlined, size: 80, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)),
-          const SizedBox(height: 24),
-          Text(
-            'No accounts yet',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Tap the + button to add your first 2FA account',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                  width: 1.5,
+                ),
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.shield_outlined,
+                  size: 48,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Chưa có tài khoản 2FA',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Nhấn nút "+ Thêm tài khoản" để bắt đầu bảo vệ các tài khoản trực tuyến của bạn.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.4,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

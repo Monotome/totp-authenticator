@@ -204,6 +204,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}:${dt.second.toString().padLeft(2, '0')}';
   }
 
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8, top: 4),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -218,17 +233,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         children: [
           // Section 1: Cloud Sync (E2EE)
+          _buildSectionHeader('Đồng bộ đám mây (E2EE)'),
           _buildSyncCard(context, theme, syncProvider),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
           // Section 2: App Security & Biometrics
+          _buildSectionHeader('Bảo mật & Sinh trắc học'),
           _buildSecurityCard(context, theme, securityProvider),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
           // Section 3: App & Security Info
+          _buildSectionHeader('Thông tin hệ thống'),
           _buildInfoCard(context, theme),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -236,10 +255,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildSyncCard(BuildContext context, ThemeData theme, SyncProvider syncProvider) {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.outline.withValues(alpha: 0.6),
+          width: 1,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         child: syncProvider.isLoggedIn
             ? _buildConnectedView(context, theme, syncProvider)
             : _buildDisconnectedView(context, theme, syncProvider),
@@ -270,7 +295,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     width: 8,
                     height: 8,
                     decoration: const BoxDecoration(
-                      color: Colors.green,
+                      color: Color(0xFF4ADE80),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -278,7 +303,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const Text(
                     'Đã kết nối',
                     style: TextStyle(
-                      color: Colors.green,
+                      color: Color(0xFF4ADE80),
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                     ),
@@ -337,8 +362,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
-            backgroundColor: theme.colorScheme.primary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
 
@@ -426,13 +450,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
+              color: theme.colorScheme.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
-                Icon(Icons.shield_outlined, color: theme.colorScheme.primary, size: 28),
+                Icon(Icons.shield_outlined, color: theme.colorScheme.primary, size: 26),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -440,12 +464,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       const Text(
                         'Bảo mật Zero-Knowledge (E2EE)',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Máy chủ chỉ lưu trữ blob mã hóa. Khóa mật mã không bao giờ rời khỏi thiết bị.',
-                        style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+                        style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
                       ),
                     ],
                   ),
@@ -454,7 +478,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
 
           // Server URL Input
           TextFormField(
@@ -472,26 +496,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 8),
 
           // Quick Preset Chips for Server URL
-          Wrap(
-            spacing: 8,
-            children: [
-              ActionChip(
-                label: const Text('Emulator (10.0.2.2:8000)', style: TextStyle(fontSize: 11)),
-                onPressed: () {
-                  setState(() {
-                    _serverUrlController.text = 'http://10.0.2.2:8000';
-                  });
-                },
-              ),
-              ActionChip(
-                label: const Text('Localhost (127.0.0.1:8000)', style: TextStyle(fontSize: 11)),
-                onPressed: () {
-                  setState(() {
-                    _serverUrlController.text = 'http://127.0.0.1:8000';
-                  });
-                },
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 4),
+            child: Row(
+              children: [
+                Text(
+                  'Gợi ý:',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildPresetChip('Emulator (10.0.2.2:8000)', 'http://10.0.2.2:8000', theme),
+                        const SizedBox(width: 8),
+                        _buildPresetChip('Localhost (127.0.0.1:8000)', 'http://127.0.0.1:8000', theme),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
 
           const SizedBox(height: 14),
@@ -544,8 +574,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: isSyncing ? null : _handleAuthSubmit,
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: theme.colorScheme.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: isSyncing
                 ? const SizedBox(
@@ -582,31 +611,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildDetailRow(String title, String value, IconData icon, ThemeData theme) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-        const SizedBox(width: 10),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 13,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+  Widget _buildPresetChip(String label, String url, ThemeData theme) {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _serverUrlController.text = url;
+        });
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: theme.colorScheme.outline.withValues(alpha: 0.6),
+            width: 1,
           ),
         ),
-        const Spacer(),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String title, String value, IconData icon, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(icon, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+          const SizedBox(width: 10),
+          Text(
+            title,
+            style: TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              softWrap: true,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -616,10 +679,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final biometricName = security.biometricDisplayName;
 
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.outline.withValues(alpha: 0.6),
+          width: 1,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -640,7 +709,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
             // Biometric Toggle Switch
             SwitchListTile.adaptive(
@@ -737,10 +806,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildInfoCard(BuildContext context, ThemeData theme) {
     return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.outline.withValues(alpha: 0.6),
+          width: 1,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -761,8 +836,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            _buildDetailRow('Phiên bản', 'v0.7.0', Icons.tag, theme),
+            const SizedBox(height: 14),
+            _buildDetailRow('Phiên bản', 'v0.8.1', Icons.tag, theme),
             const Divider(height: 18),
             _buildDetailRow('Tiêu chuẩn 2FA', 'RFC 6238 / RFC 4226', Icons.check_circle_outline, theme),
             const Divider(height: 18),
