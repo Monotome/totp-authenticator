@@ -888,7 +888,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onSelectionChanged: (newSelection) {
                   config.setThemeMode(newSelection.first);
                 },
-                style: const ButtonStyle(
+                style: SegmentedButton.styleFrom(
+                  selectedBackgroundColor: theme.colorScheme.primary,
+                  selectedForegroundColor: theme.colorScheme.onPrimary,
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  side: BorderSide(
+                    color: theme.colorScheme.outline.withValues(alpha: 0.6),
+                    width: 1,
+                  ),
                   visualDensity: VisualDensity.compact,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),

@@ -84,6 +84,16 @@ class AppTheme {
         }),
         trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
       ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: SegmentedButton.styleFrom(
+          selectedBackgroundColor: accentSky,
+          selectedForegroundColor: primaryDark,
+          backgroundColor: Colors.transparent,
+          foregroundColor: textDim,
+          side: const BorderSide(color: borderDark, width: 1),
+          visualDensity: VisualDensity.compact,
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: primaryDark,
@@ -185,6 +195,16 @@ class AppTheme {
           return lightBorder;
         }),
         trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: SegmentedButton.styleFrom(
+          selectedBackgroundColor: const Color(0xFF0284C7),
+          selectedForegroundColor: Colors.white,
+          backgroundColor: Colors.transparent,
+          foregroundColor: const Color(0xFF64748B),
+          side: const BorderSide(color: lightBorder, width: 1),
+          visualDensity: VisualDensity.compact,
+        ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
