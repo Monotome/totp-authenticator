@@ -131,7 +131,42 @@ async def test_health_check():
 
 ---
 
-## 5. Execution Flags & Best Practices
+## 5. Negative Security & Abuse Testing (Mandatory for Auth & Crypto)
+
+**Rule**: Never write tests only for the "happy path" (valid inputs leading to success). When introducing or refactoring any security, password, or encryption flows, agents **MUST** author negative / abuse test cases asserting that unauthorized, malformed, or malicious attempts fail gracefully.
+
+### Key Abuse Scenarios to Test:
+1. **Wrong or Missing Current Credential**: Assert that attempting to change or remove a master password without the correct current password raises `InvalidPasswordError` or triggers an error alert.
+2. **Password Length Validation**: Assert that passwords shorter than 6 characters are rejected.
+3. **Password Confirmation Mismatch**: Assert that mismatched confirmation entries are rejected.
+4. **Tampered Ciphertext / Injected Bytes**: Assert that modified or truncated payloads fail AEAD authentication (`InvalidTag` / `InvalidPasswordError`).
+
+### Example Pytest Negative Test Pattern:
+```python
+def test_cannot_change_password_with_wrong_current_password(tk_root, monkeypatch):
+    """Verify master password change rejects wrong current password."""
+    key = set_encryption("correct_old_pass")
+    app = TOTPApp(tk_root)
+    app._current_key = key
+    app._open_security_dialog()
+
+    errors = []
+    monkeypatch.setattr("tkinter.messagebox.showerror", lambda title, msg, **kw: errors.append((title, msg)))
+
+    # Simulate supplying invalid old password
+    old_entry.insert(0, "wrong_password")
+    new_entry.insert(0, "new_secure_pass")
+    confirm_entry.insert(0, "new_secure_pass")
+    save_btn.invoke()
+
+    # Assert error triggered and key remains unchanged
+    assert any("Authentication Failed" in err[0] for err in errors)
+    assert app._current_key == key
+```
+
+---
+
+## 6. Execution Flags & Best Practices
 
 ```bash
 # Run tests with verbose output and coverage
