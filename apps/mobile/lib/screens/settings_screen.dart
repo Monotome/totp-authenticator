@@ -837,7 +837,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
             const SizedBox(height: 14),
-            _buildDetailRow('Phiên bản', 'v0.8.1', Icons.tag, theme),
+            _buildDetailRow('Phiên bản', 'v0.8.2', Icons.tag, theme),
             const Divider(height: 18),
             _buildDetailRow('Tiêu chuẩn 2FA', 'RFC 6238 / RFC 4226', Icons.check_circle_outline, theme),
             const Divider(height: 18),

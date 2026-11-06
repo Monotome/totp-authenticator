@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [v0.8.2] - 2026-11-06
 ### Added
 - **Mobile Modern Slate App Launcher Icons (`apps/mobile`)**:
   - Designed and generated high-resolution 1024x1024 vector-styled master icon and transparent adaptive foreground matching the Modern Slate theme (`#0B0F19` deep space background, `#1E293B` shield, `#38BDF8` sky blue outline, padlock, and `#4ADE80` mint green 2FA verification badge).
@@ -24,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Mobile Info Card Text Truncations (`apps/mobile`)**: Fixed `RFC 623...`, `Fernet A...`, `PBKDF2 4...` text cutoffs on mobile viewports by switching detail rows to flexible expanded auto-wrapping without truncation.
-- **Outdated App Version Display (`apps/mobile`)**: Corrected hardcoded `v0.7.0` in Settings info card to `v0.8.1`.
+- **Outdated App Version Display (`apps/mobile`)**: Synchronized Settings info card version to current release version.
 - **Mobile LockScreen Text Overflow (`apps/mobile`)**: Fixed a 59px `RenderFlex` horizontal overflow in the LockScreen security reassurance footer on compact viewports by wrapping description text in `Flexible` with `TextOverflow.ellipsis`.
 - **Desktop UI Polish & Border Artifacts (`apps/ui`)**:
   - **Input Focus Border Clean-up**: Fixed double vertical edge highlight artifacts in dialog input fields by wrapping entries in matching background inner frames, ensuring a sharp 1px border and smooth internal padding.
