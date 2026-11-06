@@ -12,7 +12,7 @@ from . import models, auth, database
 # Create tables
 models.Base.metadata.create_all(bind=database.engine)
 
-app = FastAPI(title="TOTP Sync API", version="0.8.2")
+app = FastAPI(title="TOTP Sync API", version="0.8.3")
 
 app.add_middleware(
     CORSMiddleware,
@@ -63,7 +63,7 @@ def root():
     return {
         "status": "healthy",
         "service": "TOTP Authenticator Cloud Sync API",
-        "version": "0.8.2",
+        "version": "0.8.3",
     }
 
 @app.get("/health")
