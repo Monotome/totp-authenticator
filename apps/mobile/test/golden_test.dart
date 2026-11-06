@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -6,7 +7,9 @@ import 'package:http/testing.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:totp_authenticator/l10n/app_localizations.dart';
 import 'package:totp_authenticator/providers/account_provider.dart';
+import 'package:totp_authenticator/providers/config_provider.dart';
 import 'package:totp_authenticator/providers/security_provider.dart';
 import 'package:totp_authenticator/providers/sync_provider.dart';
 import 'package:totp_authenticator/screens/home_screen.dart';
@@ -125,6 +128,14 @@ void main() {
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
             theme: AppTheme.darkTheme,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('vi'),
             home: const LockScreen(autoPrompt: false, animate: false),
           ),
         ),
@@ -154,6 +165,14 @@ void main() {
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('vi'),
             home: const LockScreen(autoPrompt: false, animate: false),
           ),
         ),
@@ -191,6 +210,14 @@ void main() {
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
             theme: AppTheme.darkTheme,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('vi'),
             home: const HomeScreen(),
           ),
         ),
@@ -222,6 +249,8 @@ void main() {
         apiClient: mockApiClient,
         secureStorage: fakeSecureStorage,
       );
+      final configProvider = ConfigProvider();
+      await configProvider.init();
 
       await tester.pumpWidget(
         MultiProvider(
@@ -229,10 +258,19 @@ void main() {
             ChangeNotifierProvider<AccountProvider>.value(value: accountProvider),
             ChangeNotifierProvider<SecurityProvider>.value(value: securityProvider),
             ChangeNotifierProvider<SyncProvider>.value(value: syncProvider),
+            ChangeNotifierProvider<ConfigProvider>.value(value: configProvider),
           ],
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
             theme: AppTheme.darkTheme,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('vi'),
             home: const SettingsScreen(),
           ),
         ),
@@ -246,6 +284,7 @@ void main() {
 
       accountProvider.dispose();
       syncProvider.dispose();
+      configProvider.dispose();
     });
   });
 }

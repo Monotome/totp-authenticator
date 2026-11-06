@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/account_provider.dart';
+import '../providers/config_provider.dart';
 import '../providers/security_provider.dart';
 import '../providers/sync_provider.dart';
 import '../widgets/sync_password_dialog.dart';
@@ -224,36 +226,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final theme = Theme.of(context);
     final syncProvider = context.watch<SyncProvider>();
     final securityProvider = context.watch<SecurityProvider>();
+    final configProvider = context.watch<ConfigProvider>();
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cài đặt & Cloud Sync'),
+        title: Text(l10n.settingsTitle),
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         children: [
           // Section 1: Cloud Sync (E2EE)
-          _buildSectionHeader('Đồng bộ đám mây (E2EE)'),
-          _buildSyncCard(context, theme, syncProvider),
+          _buildSectionHeader(l10n.cloudSyncSectionTitle),
+          _buildSyncCard(context, theme, syncProvider, l10n),
 
           const SizedBox(height: 24),
 
           // Section 2: App Security & Biometrics
-          _buildSectionHeader('Bảo mật & Sinh trắc học'),
-          _buildSecurityCard(context, theme, securityProvider),
+          _buildSectionHeader(l10n.securitySectionTitle),
+          _buildSecurityCard(context, theme, securityProvider, l10n),
 
           const SizedBox(height: 24),
 
-          // Section 3: App & Security Info
-          _buildSectionHeader('Thông tin hệ thống'),
-          _buildInfoCard(context, theme),
+          // Section 3: Appearance & Language
+          _buildSectionHeader(l10n.appearanceAndLanguageSectionTitle),
+          _buildPreferencesCard(context, theme, configProvider, l10n),
+
+          const SizedBox(height: 24),
+
+          // Section 4: App & Security Info
+          _buildSectionHeader(l10n.systemInfoSectionTitle),
+          _buildInfoCard(context, theme, l10n),
           const SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  Widget _buildSyncCard(BuildContext context, ThemeData theme, SyncProvider syncProvider) {
+  Widget _buildSyncCard(BuildContext context, ThemeData theme, SyncProvider syncProvider, AppLocalizations l10n) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -266,13 +276,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: syncProvider.isLoggedIn
-            ? _buildConnectedView(context, theme, syncProvider)
-            : _buildDisconnectedView(context, theme, syncProvider),
+            ? _buildConnectedView(context, theme, syncProvider, l10n)
+            : _buildDisconnectedView(context, theme, syncProvider, l10n),
       ),
     );
   }
 
-  Widget _buildConnectedView(BuildContext context, ThemeData theme, SyncProvider syncProvider) {
+  Widget _buildConnectedView(BuildContext context, ThemeData theme, SyncProvider syncProvider, AppLocalizations l10n) {
     final isSyncing = syncProvider.isSyncing;
 
     return Column(
@@ -300,9 +310,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Đã kết nối',
-                    style: TextStyle(
+                  Text(
+                    l10n.statusConnected,
+                    style: const TextStyle(
                       color: Color(0xFF4ADE80),
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -316,7 +326,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: isSyncing ? null : () => syncProvider.logout(),
               icon: Icon(Icons.logout, size: 18, color: theme.colorScheme.error),
               label: Text(
-                'Đăng xuất',
+                l10n.logoutButton,
                 style: TextStyle(color: theme.colorScheme.error, fontSize: 13),
               ),
             ),
@@ -335,9 +345,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           child: Column(
             children: [
-              _buildDetailRow('Tài khoản', syncProvider.username, Icons.person_outline, theme),
+              _buildDetailRow(l10n.usernameLabel, syncProvider.username, Icons.person_outline, theme),
               const Divider(height: 18),
-              _buildDetailRow('Máy chủ', syncProvider.serverUrl, Icons.dns_outlined, theme),
+              _buildDetailRow(l10n.serverUrlLabel, syncProvider.serverUrl, Icons.dns_outlined, theme),
               const Divider(height: 18),
               _buildDetailRow('Đồng bộ gần nhất', _formatTimestamp(syncProvider.lastSyncedAt), Icons.access_time_outlined, theme),
             ],
@@ -357,7 +367,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 )
               : const Icon(Icons.sync, size: 20),
           label: Text(
-            isSyncing ? 'Đang đồng bộ...' : 'Đồng bộ ngay (Sync Now)',
+            isSyncing ? 'Đang đồng bộ...' : l10n.syncNowButton,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           style: FilledButton.styleFrom(
@@ -375,7 +385,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: OutlinedButton.icon(
                 onPressed: isSyncing ? null : _handlePull,
                 icon: const Icon(Icons.cloud_download_outlined, size: 18),
-                label: const Text('Kéo về (Pull)'),
+                label: Text(l10n.pullButton),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -387,7 +397,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: OutlinedButton.icon(
                 onPressed: isSyncing ? null : _handlePush,
                 icon: const Icon(Icons.cloud_upload_outlined, size: 18),
-                label: const Text('Đẩy lên (Push)'),
+                label: Text(l10n.pushButton),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -438,7 +448,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildDisconnectedView(BuildContext context, ThemeData theme, SyncProvider syncProvider) {
+  Widget _buildDisconnectedView(BuildContext context, ThemeData theme, SyncProvider syncProvider, AppLocalizations l10n) {
     final isSyncing = syncProvider.isSyncing;
 
     return Form(
@@ -462,13 +472,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Bảo mật Zero-Knowledge (E2EE)',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      Text(
+                        l10n.zkBannerTitle,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Máy chủ chỉ lưu trữ blob mã hóa. Khóa mật mã không bao giờ rời khỏi thiết bị.',
+                        l10n.zkBannerBody,
                         style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
                       ),
                     ],
@@ -483,9 +493,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Server URL Input
           TextFormField(
             controller: _serverUrlController,
-            decoration: const InputDecoration(
-              labelText: 'Địa chỉ máy chủ (Server URL)',
-              prefixIcon: Icon(Icons.dns_outlined, size: 20),
+            decoration: InputDecoration(
+              labelText: l10n.serverUrlLabel,
+              prefixIcon: const Icon(Icons.dns_outlined, size: 20),
             ),
             validator: (val) {
               if (val == null || val.trim().isEmpty) return 'Vui lòng nhập địa chỉ máy chủ';
@@ -501,7 +511,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Row(
               children: [
                 Text(
-                  'Gợi ý:',
+                  l10n.serverPresetsLabel,
                   style: TextStyle(
                     fontSize: 11,
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
@@ -529,9 +539,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Username Input
           TextFormField(
             controller: _usernameController,
-            decoration: const InputDecoration(
-              labelText: 'Tên người dùng',
-              prefixIcon: Icon(Icons.person_outline, size: 20),
+            decoration: InputDecoration(
+              labelText: l10n.usernameLabel,
+              prefixIcon: const Icon(Icons.person_outline, size: 20),
             ),
             validator: (val) {
               if (val == null || val.trim().isEmpty) return 'Vui lòng nhập tên người dùng';
@@ -546,7 +556,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             controller: _passwordController,
             obscureText: _obscurePassword,
             decoration: InputDecoration(
-              labelText: 'Mật khẩu tài khoản',
+              labelText: l10n.passwordLabel,
               prefixIcon: const Icon(Icons.lock_outline, size: 20),
               suffixIcon: IconButton(
                 icon: Icon(
@@ -583,7 +593,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
                 : Text(
-                    _isRegisterMode ? 'Đăng ký tài khoản' : 'Đăng nhập',
+                    _isRegisterMode ? l10n.registerButton : l10n.loginButton,
                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
           ),
@@ -601,8 +611,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
             child: Text(
               _isRegisterMode
-                  ? 'Đã có tài khoản? Đăng nhập ngay'
-                  : 'Chưa có tài khoản trên máy chủ? Đăng ký ngay',
+                  ? l10n.loginSwitchButton
+                  : l10n.registerSwitchButton,
               style: TextStyle(color: theme.colorScheme.primary, fontSize: 13),
             ),
           ),
@@ -673,7 +683,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSecurityCard(BuildContext context, ThemeData theme, SecurityProvider security) {
+  Widget _buildSecurityCard(BuildContext context, ThemeData theme, SecurityProvider security, AppLocalizations l10n) {
     final isSupported = security.isDeviceSupported;
     final isEnabled = security.isBiometricEnabled;
     final biometricName = security.biometricDisplayName;
@@ -703,9 +713,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Icon(Icons.fingerprint, color: theme.colorScheme.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
-                const Text(
-                  'Bảo mật ứng dụng',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                Text(
+                  l10n.securityCardTitle,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -715,15 +725,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
               title: Text(
-                'Khóa bằng $biometricName',
+                l10n.biometricTitle(biometricName),
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               subtitle: Text(
                 !isSupported
-                    ? 'Thiết bị không hỗ trợ hoặc chưa đăng ký sinh trắc học'
+                    ? l10n.biometricSubtitleUnsupported
                     : isEnabled
-                        ? 'Yêu cầu xác thực mỗi khi mở ứng dụng'
-                        : 'Bảo vệ mã 2FA khỏi người lạ',
+                        ? l10n.biometricSubtitleEnabled
+                        : l10n.biometricSubtitleDisabled,
                 style: TextStyle(
                   fontSize: 12,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -737,7 +747,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       if (!success && context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: const Text('Xác thực thất bại. Không thể thay đổi cài đặt.'),
+                            content: Text(l10n.authFailedError),
                             backgroundColor: theme.colorScheme.error,
                             behavior: SnackBarBehavior.floating,
                           ),
@@ -755,7 +765,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Icon(Icons.timer_outlined, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                   const SizedBox(width: 10),
                   Text(
-                    'Tự động khóa sau',
+                    l10n.autoLockLabel,
                     style: TextStyle(
                       fontSize: 13,
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
@@ -766,12 +776,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     value: security.autoLockSeconds,
                     underline: const SizedBox(),
                     borderRadius: BorderRadius.circular(12),
-                    items: const [
-                      DropdownMenuItem(value: 0, child: Text('Ngay lập tức', style: TextStyle(fontSize: 13))),
-                      DropdownMenuItem(value: 30, child: Text('30 giây', style: TextStyle(fontSize: 13))),
-                      DropdownMenuItem(value: 60, child: Text('1 phút', style: TextStyle(fontSize: 13))),
-                      DropdownMenuItem(value: 300, child: Text('5 phút', style: TextStyle(fontSize: 13))),
-                      DropdownMenuItem(value: 900, child: Text('15 phút', style: TextStyle(fontSize: 13))),
+                    items: [
+                      DropdownMenuItem(value: 0, child: Text(l10n.autoLockImmediate, style: const TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 30, child: Text(l10n.autoLockSeconds(30), style: const TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 60, child: Text(l10n.autoLockMinutes(1), style: const TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 300, child: Text(l10n.autoLockMinutes(5), style: const TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 900, child: Text(l10n.autoLockMinutes(15), style: const TextStyle(fontSize: 13))),
                     ],
                     onChanged: (val) {
                       if (val != null) {
@@ -791,7 +801,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Navigator.of(context).popUntil((route) => route.isFirst);
                 },
                 icon: const Icon(Icons.lock_outline, size: 18),
-                label: const Text('Khóa ứng dụng ngay (Lock Now)'),
+                label: Text(l10n.lockNowButton),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -804,7 +814,139 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildInfoCard(BuildContext context, ThemeData theme) {
+  Widget _buildPreferencesCard(
+    BuildContext context,
+    ThemeData theme,
+    ConfigProvider config,
+    AppLocalizations l10n,
+  ) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.outline.withValues(alpha: 0.6),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Card Title
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.palette_outlined, color: theme.colorScheme.primary, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  l10n.appearanceAndLanguageCardTitle,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Item 1: Theme Mode
+            Text(
+              l10n.themeLabel,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<ThemeMode>(
+                segments: [
+                  ButtonSegment<ThemeMode>(
+                    value: ThemeMode.system,
+                    icon: const Icon(Icons.brightness_auto, size: 16),
+                    label: Text(l10n.themeSystem, style: const TextStyle(fontSize: 12)),
+                  ),
+                  ButtonSegment<ThemeMode>(
+                    value: ThemeMode.dark,
+                    icon: const Icon(Icons.dark_mode_outlined, size: 16),
+                    label: Text(l10n.themeDark, style: const TextStyle(fontSize: 12)),
+                  ),
+                  ButtonSegment<ThemeMode>(
+                    value: ThemeMode.light,
+                    icon: const Icon(Icons.light_mode_outlined, size: 16),
+                    label: Text(l10n.themeLight, style: const TextStyle(fontSize: 12)),
+                  ),
+                ],
+                selected: {config.themeMode},
+                onSelectionChanged: (newSelection) {
+                  config.setThemeMode(newSelection.first);
+                },
+                style: const ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
+
+            const Divider(height: 28),
+
+            // Item 2: Display Language
+            Row(
+              children: [
+                Icon(
+                  Icons.language_outlined,
+                  size: 18,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  l10n.languageLabel,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                  ),
+                ),
+                const Spacer(),
+                DropdownButton<String>(
+                  value: config.languageCode,
+                  underline: const SizedBox(),
+                  borderRadius: BorderRadius.circular(12),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'system',
+                      child: Text(l10n.languageSystem, style: const TextStyle(fontSize: 13)),
+                    ),
+                    DropdownMenuItem(
+                      value: 'vi',
+                      child: Text(l10n.languageVi, style: const TextStyle(fontSize: 13)),
+                    ),
+                    DropdownMenuItem(
+                      value: 'en',
+                      child: Text(l10n.languageEn, style: const TextStyle(fontSize: 13)),
+                    ),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      config.setLanguageCode(val);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(BuildContext context, ThemeData theme, AppLocalizations l10n) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -830,20 +972,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Icon(Icons.info_outline, color: theme.colorScheme.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
-                const Text(
-                  'Thông tin ứng dụng',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                Text(
+                  l10n.appInfoTitle,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
             const SizedBox(height: 14),
-            _buildDetailRow('Phiên bản', 'v0.8.2', Icons.tag, theme),
+            _buildDetailRow(l10n.versionLabel, 'v0.8.2', Icons.tag, theme),
             const Divider(height: 18),
-            _buildDetailRow('Tiêu chuẩn 2FA', 'RFC 6238 / RFC 4226', Icons.check_circle_outline, theme),
+            _buildDetailRow(l10n.twoFaStandardLabel, 'RFC 6238 / RFC 4226', Icons.check_circle_outline, theme),
             const Divider(height: 18),
-            _buildDetailRow('Thuật toán E2EE', 'Fernet AES-128-CBC', Icons.security, theme),
+            _buildDetailRow(l10n.e2eeAlgorithmLabel, 'Fernet AES-128-CBC', Icons.security, theme),
             const Divider(height: 18),
-            _buildDetailRow('Dẫn xuất khóa', 'PBKDF2 480k rounds', Icons.enhanced_encryption_outlined, theme),
+            _buildDetailRow(l10n.keyDerivationLabel, 'PBKDF2 480k rounds', Icons.enhanced_encryption_outlined, theme),
           ],
         ),
       ),

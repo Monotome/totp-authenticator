@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../models/account.dart';
 import '../providers/account_provider.dart';
 import '../providers/sync_provider.dart';
@@ -17,6 +18,7 @@ class HomeScreen extends StatelessWidget {
     final accounts = provider.accounts;
     final remaining = provider.remainingSeconds;
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
@@ -25,7 +27,7 @@ class HomeScreen extends StatelessWidget {
           children: [
             Icon(Icons.shield_outlined, color: theme.colorScheme.primary, size: 20),
             const SizedBox(width: 8),
-            const Text('TOTP Authenticator'),
+            Text(l10n.appName),
           ],
         ),
         actions: [
@@ -34,7 +36,7 @@ class HomeScreen extends StatelessWidget {
             children: [
               IconButton(
                 icon: const Icon(Icons.settings_outlined),
-                tooltip: 'Cài đặt & Cloud Sync',
+                tooltip: l10n.settingsTooltip,
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -66,19 +68,19 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: accounts.isEmpty ? _buildEmptyState(context) : _buildList(context, accounts, remaining, theme),
+      body: accounts.isEmpty ? _buildEmptyState(context, l10n) : _buildList(context, accounts, remaining, theme, l10n),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openAddAccount(context),
+        onPressed: () => _openAddAccount(context, l10n),
         icon: const Icon(Icons.add, size: 20),
-        label: const Text(
-          'Thêm tài khoản',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        label: Text(
+          l10n.addAccountButton,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, AppLocalizations l10n) {
     final theme = Theme.of(context);
     return Center(
       child: Padding(
@@ -107,7 +109,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'Chưa có tài khoản 2FA',
+              l10n.emptyAccountsTitle,
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -116,7 +118,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Nhấn nút "+ Thêm tài khoản" để bắt đầu bảo vệ các tài khoản trực tuyến của bạn.',
+              l10n.emptyAccountsSubtitle,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -130,23 +132,23 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildList(BuildContext context, List<Account> accounts, int remaining, ThemeData theme) {
+  Widget _buildList(BuildContext context, List<Account> accounts, int remaining, ThemeData theme, AppLocalizations l10n) {
     return Column(
       children: [
         // Global countdown bar
-        _buildCountdownBar(remaining, theme),
+        _buildCountdownBar(remaining, theme, l10n),
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.only(top: 8, bottom: 80),
             itemCount: accounts.length,
-            itemBuilder: (ctx, i) => _buildAccountCard(ctx, accounts[i], remaining),
+            itemBuilder: (ctx, i) => _buildAccountCard(ctx, accounts[i], remaining, l10n),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildCountdownBar(int remaining, ThemeData theme) {
+  Widget _buildCountdownBar(int remaining, ThemeData theme, AppLocalizations l10n) {
     final progress = remaining / 30.0;
     final color = remaining <= 5
         ? theme.colorScheme.error
@@ -160,7 +162,7 @@ class HomeScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Refreshing in', style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+              Text(l10n.refreshingIn, style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
               Text('${remaining}s', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
             ],
           ),
@@ -179,10 +181,11 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAccountCard(BuildContext context, Account account, int remaining) {
+  Widget _buildAccountCard(BuildContext context, Account account, int remaining, AppLocalizations l10n) {
     final provider = context.read<AccountProvider>();
     final code = provider.getCode(account);
     final theme = Theme.of(context);
+    final displayName = account.issuer.isNotEmpty ? account.issuer : account.name;
 
     return Dismissible(
       key: Key(account.id),
@@ -201,13 +204,13 @@ class HomeScreen extends StatelessWidget {
         return await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('Delete Account?'),
-            content: Text('Remove "${account.issuer.isNotEmpty ? account.issuer : account.name}" permanently?'),
+            title: Text(l10n.deleteAccountDialogTitle),
+            content: Text(l10n.deleteAccountDialogMessage(displayName)),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
               TextButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: Text('Delete', style: TextStyle(color: theme.colorScheme.error)),
+                child: Text(l10n.delete, style: TextStyle(color: theme.colorScheme.error)),
               ),
             ],
           ),
@@ -221,7 +224,7 @@ class HomeScreen extends StatelessWidget {
             provider.copyCode(account);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text('✅ Code copied to clipboard!'),
+                content: Text(l10n.copiedToClipboard),
                 behavior: SnackBarBehavior.floating,
                 duration: const Duration(seconds: 2),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -254,7 +257,7 @@ class HomeScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        account.issuer.isNotEmpty ? account.issuer : 'Unknown',
+                        account.issuer.isNotEmpty ? account.issuer : l10n.unknown,
                         style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                       ),
                       const SizedBox(height: 2),
@@ -276,7 +279,7 @@ class HomeScreen extends StatelessWidget {
                         color: remaining <= 5 ? theme.colorScheme.error : theme.colorScheme.secondary,
                       ),
                     ),
-                    Text('Tap to copy', style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withValues(alpha: 0.4))),
+                    Text(l10n.tapToCopy, style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withValues(alpha: 0.4))),
                   ],
                 ),
               ],
@@ -287,7 +290,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  void _openAddAccount(BuildContext context) {
+  void _openAddAccount(BuildContext context, AppLocalizations l10n) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -322,7 +325,7 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             Text(
-              'Thêm tài khoản 2FA',
+              l10n.addAccountModalTitle,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -339,9 +342,9 @@ class HomeScreen extends StatelessWidget {
                 );
               },
               icon: const Icon(Icons.qr_code_scanner, size: 22),
-              label: const Text(
-                'Quét mã QR',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              label: Text(
+                l10n.scanQrOption,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -363,9 +366,9 @@ class HomeScreen extends StatelessWidget {
                 );
               },
               icon: const Icon(Icons.keyboard_outlined, size: 20),
-              label: const Text(
-                'Nhập khóa thiết lập thủ công',
-                style: TextStyle(fontSize: 15),
+              label: Text(
+                l10n.enterManualOption,
+                style: const TextStyle(fontSize: 15),
               ),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 15),

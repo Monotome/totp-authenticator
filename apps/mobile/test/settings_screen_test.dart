@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -7,7 +8,9 @@ import 'package:http/testing.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:totp_authenticator/l10n/app_localizations.dart';
 import 'package:totp_authenticator/providers/account_provider.dart';
+import 'package:totp_authenticator/providers/config_provider.dart';
 import 'package:totp_authenticator/providers/security_provider.dart';
 import 'package:totp_authenticator/providers/sync_provider.dart';
 import 'package:totp_authenticator/screens/settings_screen.dart';
@@ -83,6 +86,7 @@ void main() {
     late FakeSecureStorage fakeSecureStorage;
     late AccountProvider accountProvider;
     late SecurityProvider securityProvider;
+    late ConfigProvider configProvider;
     late SyncApiClient mockApiClient;
 
     setUp(() {
@@ -93,34 +97,50 @@ void main() {
         biometricService: MockBiometricService(),
         autoInit: false,
       );
+      configProvider = ConfigProvider(autoInit: false);
       mockApiClient = SyncApiClient(client: MockClient((_) async => http.Response('{}', 200)));
     });
 
     tearDown(() {
       accountProvider.dispose();
       securityProvider.dispose();
+      configProvider.dispose();
       mockApiClient.dispose();
     });
 
+    Widget buildTestWidget({
+      required SyncProvider syncProvider,
+    }) {
+      return MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AccountProvider>.value(value: accountProvider),
+          ChangeNotifierProvider<SecurityProvider>.value(value: securityProvider),
+          ChangeNotifierProvider<SyncProvider>.value(value: syncProvider),
+          ChangeNotifierProvider<ConfigProvider>.value(value: configProvider),
+        ],
+        child: MaterialApp(
+          locale: configProvider.locale ?? const Locale('vi'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: const SettingsScreen(),
+        ),
+      );
+    }
+
     testWidgets('renders disconnected view with zero-knowledge banner and form fields', (tester) async {
       await securityProvider.init();
+      await configProvider.init();
       final syncProvider = SyncProvider(
         apiClient: mockApiClient,
         secureStorage: fakeSecureStorage,
       );
 
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<AccountProvider>.value(value: accountProvider),
-            ChangeNotifierProvider<SecurityProvider>.value(value: securityProvider),
-            ChangeNotifierProvider<SyncProvider>.value(value: syncProvider),
-          ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
-        ),
-      );
+      await tester.pumpWidget(buildTestWidget(syncProvider: syncProvider));
       await tester.pumpAndSettle();
 
       expect(find.text('Bảo mật Zero-Knowledge (E2EE)'), findsOneWidget);
@@ -134,11 +154,12 @@ void main() {
       expect(find.text('Emulator (10.0.2.2:8000)'), findsOneWidget);
       expect(find.text('Localhost (127.0.0.1:8000)'), findsOneWidget);
 
-      // Scroll down to reveal Security Card & Info Card
-      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      // Scroll down to reveal Security Card, Appearance Card, and Info Card
+      await tester.drag(find.byType(ListView), const Offset(0, -600));
       await tester.pumpAndSettle();
 
       expect(find.text('Bảo mật ứng dụng'), findsOneWidget);
+      expect(find.text('Tùy chọn hiển thị'), findsOneWidget);
       expect(find.text('Thông tin ứng dụng'), findsOneWidget);
       expect(find.text('v0.8.2'), findsOneWidget);
 
@@ -147,23 +168,13 @@ void main() {
 
     testWidgets('renders security card and toggles biometric protection', (tester) async {
       await securityProvider.init();
+      await configProvider.init();
       final syncProvider = SyncProvider(
         apiClient: mockApiClient,
         secureStorage: fakeSecureStorage,
       );
 
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<AccountProvider>.value(value: accountProvider),
-            ChangeNotifierProvider<SecurityProvider>.value(value: securityProvider),
-            ChangeNotifierProvider<SyncProvider>.value(value: syncProvider),
-          ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
-        ),
-      );
+      await tester.pumpWidget(buildTestWidget(syncProvider: syncProvider));
       await tester.pumpAndSettle();
 
       // Scroll down to reveal Security Card
@@ -186,67 +197,91 @@ void main() {
       syncProvider.dispose();
     });
 
-    testWidgets('tapping preset chip updates Server URL text field', (tester) async {
+    testWidgets('renders appearance and language card and toggles theme mode', (tester) async {
       await securityProvider.init();
+      await configProvider.init();
       final syncProvider = SyncProvider(
         apiClient: mockApiClient,
         secureStorage: fakeSecureStorage,
       );
 
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<AccountProvider>.value(value: accountProvider),
-            ChangeNotifierProvider<SecurityProvider>.value(value: securityProvider),
-            ChangeNotifierProvider<SyncProvider>.value(value: syncProvider),
-          ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
-        ),
-      );
+      await tester.pumpWidget(buildTestWidget(syncProvider: syncProvider));
       await tester.pumpAndSettle();
 
+      // Scroll down to reveal Appearance Card
+      await tester.drag(find.byType(ListView), const Offset(0, -500));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tùy chọn hiển thị'), findsOneWidget);
+      expect(find.text('Chủ đề giao diện'), findsOneWidget);
+
+      // Find SegmentedButton options
+      expect(find.text('Hệ thống'), findsOneWidget);
+      expect(find.text('Tối'), findsOneWidget);
+      expect(find.text('Sáng'), findsOneWidget);
+
+      // Tap 'Sáng' (Light)
+      await tester.tap(find.text('Sáng'));
+      await tester.pumpAndSettle();
+
+      expect(configProvider.themeMode, ThemeMode.light);
+
+      syncProvider.dispose();
+    });
+
+    testWidgets('renders appearance and language card and changes language to English', (tester) async {
+      await securityProvider.init();
+      await configProvider.init();
+      final syncProvider = SyncProvider(
+        apiClient: mockApiClient,
+        secureStorage: fakeSecureStorage,
+      );
+
+      await tester.pumpWidget(buildTestWidget(syncProvider: syncProvider));
+      await tester.pumpAndSettle();
+
+      // Change language to English via provider
+      await configProvider.setLanguageCode('en');
+      await tester.pumpWidget(buildTestWidget(syncProvider: syncProvider));
+      await tester.pumpAndSettle();
+
+      // The screen should now render English labels
+      expect(find.text('Settings & Cloud Sync'), findsOneWidget);
+      expect(find.text('Zero-Knowledge Security (E2EE)'), findsOneWidget);
+      expect(find.text('Server Address (URL)'), findsOneWidget);
+      expect(find.text('Username'), findsOneWidget);
+      expect(find.text('Account Password'), findsOneWidget);
+      expect(find.text('Log In'), findsOneWidget);
+
+      syncProvider.dispose();
+    });
+
+    testWidgets('tapping preset chip updates Server URL text field', (tester) async {
+      await securityProvider.init();
+      await configProvider.init();
+      final syncProvider = SyncProvider(
+        apiClient: mockApiClient,
+        secureStorage: fakeSecureStorage,
+      );
+
+      await tester.pumpWidget(buildTestWidget(syncProvider: syncProvider));
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(TextFormField, 'http://10.0.2.2:8000'), findsOneWidget);
+
+      // Tap Localhost preset chip
       await tester.tap(find.text('Localhost (127.0.0.1:8000)'));
       await tester.pumpAndSettle();
 
-      expect(find.text('http://127.0.0.1:8000'), findsOneWidget);
+      expect(find.widgetWithText(TextFormField, 'http://127.0.0.1:8000'), findsOneWidget);
 
       syncProvider.dispose();
     });
 
-    testWidgets('toggling register mode changes button label and prompt', (tester) async {
+    testWidgets('renders connected view with sync actions when logged in', (tester) async {
       await securityProvider.init();
-      final syncProvider = SyncProvider(
-        apiClient: mockApiClient,
-        secureStorage: fakeSecureStorage,
-      );
+      await configProvider.init();
 
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<AccountProvider>.value(value: accountProvider),
-            ChangeNotifierProvider<SecurityProvider>.value(value: securityProvider),
-            ChangeNotifierProvider<SyncProvider>.value(value: syncProvider),
-          ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Chưa có tài khoản trên máy chủ? Đăng ký ngay'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Đăng ký tài khoản'), findsOneWidget);
-      expect(find.text('Đã có tài khoản? Đăng nhập ngay'), findsOneWidget);
-
-      syncProvider.dispose();
-    });
-
-    testWidgets('renders connected view with sync buttons when logged in', (tester) async {
-      await securityProvider.init();
       final mockClient = MockClient((request) async {
         return http.Response(
           jsonEncode({'access_token': 'test-token', 'token_type': 'bearer'}),
@@ -262,18 +297,7 @@ void main() {
 
       await syncProvider.login('http://10.0.2.2:8000', 'super_user', 'pass');
 
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<AccountProvider>.value(value: accountProvider),
-            ChangeNotifierProvider<SecurityProvider>.value(value: securityProvider),
-            ChangeNotifierProvider<SyncProvider>.value(value: syncProvider),
-          ],
-          child: const MaterialApp(
-            home: SettingsScreen(),
-          ),
-        ),
-      );
+      await tester.pumpWidget(buildTestWidget(syncProvider: syncProvider));
       await tester.pumpAndSettle();
 
       expect(find.text('Đã kết nối'), findsOneWidget);

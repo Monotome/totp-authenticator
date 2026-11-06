@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/security_provider.dart';
 
 /// Full-screen lock view shown when biometric protection is enabled and app is locked.
@@ -68,6 +69,7 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
     final security = context.watch<SecurityProvider>();
     final isAuthenticating = security.isAuthenticating;
     final biometricName = security.biometricDisplayName;
+    final l10n = context.l10n;
 
     return Scaffold(
       body: SafeArea(
@@ -119,7 +121,7 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
 
               // Header Titles
               Text(
-                'Ứng dụng đã bị khóa',
+                l10n.lockTitle,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
@@ -130,7 +132,7 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
               const SizedBox(height: 12),
 
               Text(
-                'Xác thực bằng $biometricName để truy cập các mã 2FA của bạn an toàn.',
+                l10n.lockSubtitle(biometricName),
                 style: TextStyle(
                   fontSize: 14,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
@@ -152,7 +154,7 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
                       )
                     : const Icon(Icons.lock_open_rounded, size: 22),
                 label: Text(
-                  isAuthenticating ? 'Đang xác thực...' : 'Mở khóa bằng $biometricName',
+                  isAuthenticating ? l10n.authenticating : l10n.unlockButton(biometricName),
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 style: FilledButton.styleFrom(
@@ -177,7 +179,7 @@ class _LockScreenState extends State<LockScreen> with SingleTickerProviderStateM
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
-                      'Bảo vệ bằng phần cứng an toàn của thiết bị',
+                      l10n.secureHardwareReassurance,
                       style: TextStyle(
                         fontSize: 12,
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.4),

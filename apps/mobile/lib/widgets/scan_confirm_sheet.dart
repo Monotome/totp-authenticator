@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../models/account.dart';
 import '../services/totp_service.dart';
 import '../theme.dart';
@@ -67,8 +68,9 @@ class _ScanConfirmSheetState extends State<ScanConfirmSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final account = widget.account;
+    final l10n = context.l10n;
     final displayIssuer =
-        account.issuer.isNotEmpty ? account.issuer : 'Không xác định';
+        account.issuer.isNotEmpty ? account.issuer : l10n.unknown;
     final initialLetter =
         (account.issuer.isNotEmpty ? account.issuer : account.name)
             .substring(0, 1)
@@ -120,7 +122,7 @@ class _ScanConfirmSheetState extends State<ScanConfirmSheet> {
               const Icon(Icons.check_circle_outline, color: AppTheme.accentGreen, size: 24),
               const SizedBox(width: 8),
               Text(
-                'Mã QR hợp lệ!',
+                l10n.scanConfirmTitle,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -210,7 +212,7 @@ class _ScanConfirmSheetState extends State<ScanConfirmSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'MÃ XÁC THỰC HIỆN TẠI',
+                      l10n.scanCurrentCode.toUpperCase(),
                       style: TextStyle(
                         fontSize: 10,
                         letterSpacing: 1.2,
@@ -257,9 +259,9 @@ class _ScanConfirmSheetState extends State<ScanConfirmSheet> {
           FilledButton.icon(
             onPressed: () => Navigator.pop(context, ScanConfirmAction.save),
             icon: const Icon(Icons.check, size: 20),
-            label: const Text(
-              'Thêm tài khoản',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            label: Text(
+              l10n.saveAccountButton,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -274,7 +276,7 @@ class _ScanConfirmSheetState extends State<ScanConfirmSheet> {
           OutlinedButton.icon(
             onPressed: () => Navigator.pop(context, ScanConfirmAction.edit),
             icon: const Icon(Icons.edit_outlined, size: 18),
-            label: const Text('Chỉnh sửa thông tin'),
+            label: Text(l10n.editAccountTitle),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(

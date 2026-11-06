@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- **Mobile Theme Mode & Dual-Language Selection (`apps/mobile`)**:
+  - **Dynamic Theme Mode Switching**: Added `ConfigProvider` managing `ThemeMode.system`, `ThemeMode.dark`, and `ThemeMode.light` with persistence in `SharedPreferences` (`app_theme_mode`).
+  - **Comprehensive Localization Framework (`AppLocalizations`)**: Implemented compile-time safe, typed translations for Vietnamese (`vi`) and English (`en`) supporting both system locale matching and explicit user selection.
+  - **Settings UI Preference Controls**: Added a grouped `GIAO DIỆN & NGÔN NGỮ` (`APPEARANCE & LANGUAGE`) card in `SettingsScreen` featuring a 3-way `SegmentedButton<ThemeMode>` (System / Dark / Light) and a styled language `DropdownButton` (Theo hệ thống / Tiếng Việt / English).
+  - **Full Mobile Screen Localization**: Localized all mobile user interfaces, labels, dialogs, error messages, and bottom sheets across `HomeScreen`, `LockScreen`, `AddAccountScreen`, `ScanScreen`, `ScanConfirmSheet`, and `SyncPasswordDialog`.
+  - **Test Coverage**: Added dedicated unit tests for `AppLocalizations` (`app_localizations_test.dart`), `ConfigProvider` (`config_provider_test.dart`), localized widget tests (`settings_screen_test.dart`, `sync_password_dialog_test.dart`), and updated visual golden tests (`golden_test.dart`).
 
 ## [v0.8.2] - 2026-11-06
 ### Added
