@@ -33,6 +33,6 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('🔐 TOTP Authenticator'), findsOneWidget);
+    expect(find.text('TOTP Authenticator'), findsOneWidget);
   });
 }

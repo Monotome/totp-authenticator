@@ -8,9 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - **Desktop UI Geometry & Visual Alignment Testing (`apps/ui`)**: Added automated geometry assertions in `test_ui_modern.py` verifying that toolbar buttons share identical vertical coordinates (`winfo_rooty()`), exact 28x28px dimensions, strictly ordered horizontal positions, vector icon caching, and inner wrapper padding isolating focus border colors.
-- **Mobile Flutter Golden Visual Testing (`apps/mobile`)**: Established pixel-by-pixel visual snapshot testing pipeline using `matchesGoldenFile` for Mobile UI (`LockScreen` in Dark & Light themes), rendering baseline PNGs at 1080x1920 viewport to automatically catch visual layout regressions in CI/test runs.
+- **Mobile Flutter Golden Visual Testing (`apps/mobile`)**: Established pixel-by-pixel visual snapshot testing pipeline using `matchesGoldenFile` for Mobile UI (`LockScreen`, `HomeScreen`, `SettingsScreen`), rendering baseline PNGs at 1080x1920 viewport to automatically catch visual layout regressions in CI/test runs.
+
+### Changed
+- **Mobile Modern Slate UI & Grouped Settings Overhaul (`apps/mobile`)**:
+  - **Color Palette Synchronization**: Migrated mobile dark theme from legacy navy/neon cyan to Modern Slate (`#0B0F19` background, `#1E293B` card surface, `#334155` border, `#38BDF8` sky blue accent), achieving 100% visual consistency with the desktop app.
+  - **Grouped Inset Settings Layout**: Reorganized `SettingsScreen` into distinct grouped cards with uppercase bold section headers (`ĐỒNG BỘ ĐÁM MÂY (E2EE)`, `BẢO MẬT & SINH TRẮC HỌC`, `THÔNG TIN HỆ THỐNG`).
+  - **Clean Server Presets**: Replaced bulky debug buttons with an elegant, 1px bordered suggestion row (`Gợi ý: [Emulator] [Localhost]`).
+  - **Material 3 Switch & 1px Outlined Inputs**: Styled biometric switch with high-contrast white thumb on sky blue track and inputs with crisp 1px borders and dynamic focus rings.
+  - **Home Screen & Empty State Localization**: Replaced AppBar emoji with clean vector shield icon, updated Empty State with professional Vietnamese copy and glowing shield illustration, and restyled `+ Thêm tài khoản` FAB.
 
 ### Fixed
+- **Mobile Info Card Text Truncations (`apps/mobile`)**: Fixed `RFC 623...`, `Fernet A...`, `PBKDF2 4...` text cutoffs on mobile viewports by switching detail rows to flexible expanded auto-wrapping without truncation.
+- **Outdated App Version Display (`apps/mobile`)**: Corrected hardcoded `v0.7.0` in Settings info card to `v0.8.1`.
 - **Mobile LockScreen Text Overflow (`apps/mobile`)**: Fixed a 59px `RenderFlex` horizontal overflow in the LockScreen security reassurance footer on compact viewports by wrapping description text in `Flexible` with `TextOverflow.ellipsis`.
 - **Desktop UI Polish & Border Artifacts (`apps/ui`)**:
   - **Input Focus Border Clean-up**: Fixed double vertical edge highlight artifacts in dialog input fields by wrapping entries in matching background inner frames, ensuring a sharp 1px border and smooth internal padding.
